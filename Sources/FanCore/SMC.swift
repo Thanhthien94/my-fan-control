@@ -66,38 +66,13 @@ public final class SMC {
     }
     return keys.sorted()
   }
-  public func snapshot() throws -> Snapshot {
-    let count = try number("FNum")
-    guard count >= 0, count <= 10 else {
-      throw FanError.invalid(L10n.t("Số lượng quạt không hợp lệ."))
-    }
-    let fans = try (0..<Int(count)).map { i -> Fan in
-      let current = try number("F\(i)Ac")
-      let minimum = try number("F\(i)Mn")
-      let maximum = try number("F\(i)Mx")
-      guard current.isFinite, minimum.isFinite, maximum.isFinite, current >= 0, current <= 20000,
-        minimum >= 0, maximum > minimum, maximum <= 20000
-      else { throw FanError.invalid(L10n.f("error.fanData", i)) }
-      let manual: Bool
-      if let mode = (try? number("F\(i)md")) ?? (try? number("F\(i)Md")) {
-        manual = FanKeyController.isManual(mode: mode, gate: try? number("Ftst"))
-      } else {
-        manual = (Int((try? number("FS! ")) ?? 0) & (1 << i)) != 0
-      }
-      return Fan(
-        id: i,
-        name: Int(count) == 2
-          ? (i == 0 ? L10n.t("Quạt trái") : L10n.t("Quạt phải")) : L10n.f("fan.name", i + 1),
-        current: current, minimum: minimum, maximum: maximum, target: try? number("F\(i)Tg"),
-        manual: manual)
-    }
-    if temperatureKeys == nil { temperatureKeys = try discoverTemperatures() }
-    let sensors = (temperatureKeys ?? []).compactMap { key -> Sensor? in
-      guard let t = try? number(key), t > 0, t < 130 else { return nil }
-      return Sensor(id: key, name: Self.sensorName(key), celsius: t)
-    }
-    return Snapshot(fans: fans, sensors: sensors)
-  }
+  private lazy var telemetry = SMCTelemetryReader(
+    number: { [unowned self] in try self.number($0) },
+    temperatureKeys: { [unowned self] in
+      if self.temperatureKeys == nil { self.temperatureKeys = try self.discoverTemperatures() }
+      return self.temperatureKeys ?? []
+    })
+  public func snapshot() throws -> Snapshot { try telemetry.snapshot() }
   public static func sensorName(_ key: String) -> String {
     SensorCatalog.lookup(key).name
   }

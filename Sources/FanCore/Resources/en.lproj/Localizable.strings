@@ -231,3 +231,7 @@
 "schedule.zeroNow" = "0 starts immediately; maximum 1440 minutes.";
 "schedule.runDuration" = "Run for (minutes)";
 "schedule.enabled" = "Enable this schedule";
+"compat.noFans" = "No SMC fans reported";
+"compat.noFansDetail" = "Temperature monitoring is available. Macs with passive cooling have no fans to control.";
+"compat.unavailableFans" = "Fan data is unavailable or invalid. Available temperatures remain visible; fan controls are disabled.";
+"sensor.cpu" = "CPU sensor %d";
