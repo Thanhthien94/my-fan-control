@@ -27,6 +27,15 @@ import Testing
     var draft = saved
     draft.rpm = 2500
     #expect(FanEditorDraftStatus.resolve(draft: draft, saved: saved, applied: false) == .unsavedPreset)
-    #expect(FanEditorDraftStatus.resolve(draft: saved, saved: saved, applied: true) == .ready)
+    #expect(FanEditorDraftStatus.resolve(draft: saved, saved: saved, applied: true) == .manualApplied)
   }
+  @Test func unchangedManualPresetCanStillBePendingApplication() {
+    let preset = FanPreset(name: "Work", mode: .fixed, rpm: 2000)
+    #expect(FanEditorDraftStatus.resolve(draft: preset, saved: preset, applied: false) == .manualPending)
+    #expect(FanEditorDraftStatus.resolve(draft: preset, saved: preset, applied: false, busy: true, authorizing: true) == .authorizing)
+    #expect(FanEditorDraftStatus.resolve(draft: preset, saved: preset, applied: false, busy: true) == .applying)
+    #expect(FanEditorDraftStatus.resolve(draft: preset, saved: preset, applied: false, restoring: true) == .restoring)
+    #expect(FanEditorDraftStatus.resolve(draft: preset, saved: preset, applied: true, valid: false) == .invalid)
+  }
+
 }

@@ -31,6 +31,7 @@ struct GeneralSettingsView: View {
           Text("English").tag("en")
         }.pickerStyle(.segmented)
         Toggle(L10n.t("Hiển thị cảm biến bằng °F"), isOn: $fahrenheit)
+        LabeledContent(L10n.t("Cập nhật"), value: L10n.t("Mỗi 1 giây"))
         Divider()
         Picker(L10n.t("settings.menuSensor"), selection: $menuBarSensorID) {
           Text(L10n.t("Cảm biến nóng nhất")).tag("")

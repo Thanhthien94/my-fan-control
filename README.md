@@ -8,8 +8,8 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 
 ## Features
 
-- Live fan RPM and hardware minimum/maximum, refreshed every two seconds.
-- Searchable temperature sensors; unknown SMC keys retain their raw identities.
+- Live fan RPM and hardware minimum/maximum, refreshed every second.
+- Searchable temperature sensors; the control picker prioritizes identified CPU/GPU/component groups and offers unknown keys separately without discarding the selected sensor.
 - Chip-aware component labels and explanations, with community source links and an option to reveal unidentified keys. See [what the sensors measure](docs/sensors.md).
 - Automatic control, bounded fixed RPM, and a linear temperature-based fan curve per fan.
 - One shared manual control for all fans, with per-fan limit validation and rollback on partial failure.
@@ -24,6 +24,10 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 - An on-demand privileged helper with a ten-second client lease and automatic-mode restoration attempts on expired leases, telemetry loss, high temperatures, write errors and normal termination.
 
 See the [Apple Silicon compatibility matrix](docs/apple-silicon-compatibility.md) for evidence by family and a read-only community report.
+
+## Measured resource use
+
+On an M4 Pro (14 logical CPUs, 24 GiB, AC power), two 90-second dashboard runs at 1 Hz averaged **12.46–13.95% of one CPU** and **208–213 MiB median kernel memory footprint**; a menu-bar-only run measured **12.32%** and **82.7 MiB**. These are local process measurements, not FPS or cross-device guarantees. See [method, raw-summary JSON and limitations](docs/performance.md).
 
 ## Requirements and build
 
