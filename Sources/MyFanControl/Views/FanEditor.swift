@@ -6,6 +6,10 @@ struct FanEditor: View {
   var fan: Fan
   @State private var draft = FanPreset(name: "", mode: .automatic)
   @State private var applyAll = false
+  @State private var showUnknownSensors = false
+  private var sensorGroups: [SensorPickerGroup] {
+    SensorPickerGroup.make(store.sensors, selectedID: draft.sensor, includeUnknown: showUnknownSensors)
+  }
   private var targetFans: [Fan] { applyAll ? store.fans : [fan] }
   private var saved: FanPreset? { store.presets.first(where: { $0.id == draft.id }) }
   private var unchanged: Bool { saved == draft }
@@ -75,8 +79,18 @@ struct FanEditor: View {
           case .sensor:
             Picker(L10n.t("Cảm biến"), selection: $draft.sensor) {
               Text(L10n.t("Chọn cảm biến")).tag("")
-              ForEach(store.sensors) { s in Text("\(s.name) · \(s.id)").tag(s.id) }
+              ForEach(sensorGroups) { group in
+                Section(group.component.title) {
+                  ForEach(group.sensors) { sensor in
+                    Text(SensorPickerGroup.label(sensor)).tag(sensor.id)
+                  }
+                }
+              }
+              if !draft.sensor.isEmpty, !store.sensors.contains(where: { $0.id == draft.sensor }) {
+                Text(L10n.f("settings.sensorUnavailable", draft.sensor)).tag(draft.sensor)
+              }
             }
+            Toggle(L10n.t("sensors.showUnknown"), isOn: $showUnknownSensors).font(.caption)
             HStack {
               Text(L10n.t("Bắt đầu tăng"))
               Spacer()
@@ -156,6 +170,7 @@ struct FanEditor: View {
       }
     }
     .onChange(of: draft.mode) { old, new in
+      if new == .sensor, draft.sensor.isEmpty { draft.sensor = store.preferredSensorID }
       if old == .automatic, new != .automatic, saved == nil {
         draft.name = store.uniquePresetName(L10n.t("preset.newDefault"))
         draft.sensor = store.preferredSensorID

@@ -303,3 +303,4 @@
 "operation.timeout" = "Control confirmation timed out. Automatic restoration is being requested.";
 "schedule.savedSnapshot" = "Saved schedule configuration";
 "preset.autoPending" = "Click Apply to return the selected fans to macOS automatic control.";
+"Mỗi 1 giây" = "Every second";

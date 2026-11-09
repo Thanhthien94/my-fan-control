@@ -91,7 +91,7 @@ struct TemperaturePoint: Identifiable {
       while !Task.isCancelled {
         guard let self else { break }
         await self.refresh()
-        try? await Task.sleep(for: .seconds(2))
+        try? await Task.sleep(for: .seconds(1))
       }
     }
   }
@@ -104,7 +104,7 @@ struct TemperaturePoint: Identifiable {
       if let hottest {
         history.append(TemperaturePoint(date: reading.date, temperature: hottest.celsius))
       }
-      if history.count > 1800 { history.removeFirst(history.count - 1800) }
+      history = TemperatureHistory.retaining(history, asOf: reading.date)
       if !fans.contains(where: { $0.id == selectedFan }) { selectedFan = fans.first?.id ?? 0 }
     } catch {
       self.telemetryError = error.localizedDescription
