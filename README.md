@@ -4,7 +4,7 @@
 
 A free, open-source, native macOS utility for temperature monitoring and fan control. Built with SwiftUI, Swift Charts and a small C/IOKit bridge. No web view, Electron, accounts, subscriptions or network service.
 
-**Early preview:** live monitoring has been tested on an Apple Silicon Mac. Hardware writes, administrator authorization and sleep/wake recovery still need end-to-end hardware validation. Monitoring starts without changing fan settings. The interface supports Vietnamese and English, with an immediate language switch in Settings.
+**Early preview:** live monitoring has been tested on an Apple Silicon Mac. Saved presets at 2500/2950 RPM and return to automatic were measured on an M4 Pro. Other models, thermal stress and sleep/wake recovery still need hardware validation. Monitoring starts without changing fan settings. The interface supports Vietnamese and English, with an immediate language switch in Settings.
 
 ## Features
 
