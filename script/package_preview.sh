@@ -20,7 +20,7 @@ trap 'rm -rf "$STAGE"' EXIT
 /usr/bin/codesign --verify --deep --strict "$STAGE/MyFanControl.app"
 ln -s /Applications "$STAGE/Applications"
 cp INSTALL.md "$STAGE/START HERE.md"
-cp LICENSE THIRD_PARTY_NOTICES.md PRIVACY.md "$STAGE/"
+cp LICENSE THIRD_PARTY_NOTICES.md PRIVACY.md PRIVACY-vi.md "$STAGE/"
 DMG="$ROOT_DIR/dist/MyFanControl-$VERSION-arm64.dmg"
 ZIP="$ROOT_DIR/dist/MyFanControl-$VERSION-arm64.zip"
 /usr/bin/hdiutil create -quiet -ov -volname "My Fan Control Preview" -srcfolder "$STAGE" -format UDZO "$DMG"

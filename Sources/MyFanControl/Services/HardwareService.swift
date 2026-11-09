@@ -2,6 +2,7 @@ import FanCore
 import Foundation
 
 protocol HardwareBackend: Sendable {
+  func diagnostics() async throws -> CompatibilityReport
   func read() async throws -> Snapshot
   func send(_ request: HelperRequest) async throws -> HelperResponse
   func authorize() async throws
@@ -9,6 +10,7 @@ protocol HardwareBackend: Sendable {
   func cancelAuthorization() async
 }
 extension HardwareBackend {
+  func diagnostics() async throws -> CompatibilityReport { throw FanError.unavailable }
   func authorizationFailure() async -> String? { nil }
   func cancelAuthorization() async {}
 }
@@ -24,6 +26,10 @@ actor HardwareService: HardwareBackend {
       smc = nil
       throw error
     }  // Reconnect after wake or an invalidated IOKit connection.
+  }
+  func diagnostics() throws -> CompatibilityReport {
+    if smc == nil { smc = try SMC() }
+    return try smc!.compatibilityReport()
   }
   func send(_ request: HelperRequest) throws -> HelperResponse { try HelperClient.request(request) }
 

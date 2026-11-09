@@ -9,6 +9,9 @@ struct FanEditor: View {
   private var targetFans: [Fan] { applyAll ? store.fans : [fan] }
   private var saved: FanPreset? { store.presets.first(where: { $0.id == draft.id }) }
   private var unchanged: Bool { saved == draft }
+  private var draftStatus: FanEditorDraftStatus {
+    FanEditorDraftStatus.resolve(draft: draft, saved: saved, applied: applied)
+  }
   private var limits: ClosedRange<Double> {
     let low = targetFans.map(\.minimum).max() ?? fan.minimum
     let high = targetFans.map(\.maximum).min() ?? fan.maximum
@@ -37,14 +40,6 @@ struct FanEditor: View {
       SavedPresetList(
         store: store, selectedID: draft.mode == .automatic ? nil : draft.id,
         fanIDs: targetFans.map(\.id), select: load, newPreset: newPreset)
-      HStack {
-        Button(L10n.t("preset.systemAuto")) {
-          draft = FanPreset(name: L10n.t("Tự động"), mode: .automatic)
-        }
-        Spacer()
-        Text(applied ? L10n.t("preset.inUse") : L10n.t("preset.notApplied"))
-          .font(.caption.weight(.medium)).foregroundStyle(applied ? .green : .secondary)
-      }
       Picker(L10n.t("preset.target"), selection: $applyAll) {
         Text(fan.name).tag(false)
         if store.fans.count > 1 { Text(L10n.t("preset.allFans")).tag(true) }
@@ -102,8 +97,10 @@ struct FanEditor: View {
             Label(validation, systemImage: "exclamationmark.circle").font(.caption).foregroundStyle(
               .orange)
           }
-          if saved != nil, !unchanged {
+          if draftStatus == .unsavedPreset {
             Text(L10n.t("preset.unsaved")).font(.caption).foregroundStyle(.orange)
+          } else if draftStatus == .automaticPending {
+            Text(L10n.t("preset.autoPending")).font(.caption).foregroundStyle(.secondary)
           }
         }.padding(.vertical, 2)
       }.frame(minHeight: 80, maxHeight: .infinity)

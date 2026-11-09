@@ -2,7 +2,7 @@
 
 <img src="assets/brand/AppIcon.png" alt="My Fan Control icon" width="128">
 
-A free, open-source, native macOS utility for temperature monitoring and fan control. Built with SwiftUI, Swift Charts and a small C/IOKit bridge. No web view, Electron, accounts, subscriptions or network service.
+A free, open-source, native macOS utility for temperature monitoring and fan control. Built with SwiftUI, Swift Charts and a small C/IOKit bridge. No web view, Electron, accounts, subscriptions or background network service. Manual update checks contact GitHub only when requested.
 
 **Early preview:** live monitoring has been tested on an Apple Silicon Mac. Saved presets at 2500/2950 RPM and return to automatic were measured on an M4 Pro. Other models, thermal stress and sleep/wake recovery still need hardware validation. Monitoring starts without changing fan settings. The interface supports Vietnamese and English, with an immediate language switch in Settings.
 
@@ -13,7 +13,10 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 - Chip-aware component labels and explanations, with community source links and an option to reveal unidentified keys. See [what the sensors measure](docs/sensors.md).
 - Automatic control, bounded fixed RPM, and a linear temperature-based fan curve per fan.
 - One shared manual control for all fans, with per-fan limit validation and rollback on partial failure.
-- Save and reuse named fan presets locally.
+- Save and reuse named fan presets locally; export/import versioned backups without replacing existing data. Imported schedules stay disabled.
+- A native About window with full version/build/source identity, offline licenses/privacy, Help links and manual GitHub update checks.
+- Native settings for menu bar sensor/RPM, 10/30/60-minute charts, optional Open at Login and consistent Celsius/Fahrenheit display.
+- Export current sensor readings as CSV and save a local privacy-limited diagnostics report.
 - Visible preset selection, update/copy actions, and a direct Apply flow that requests macOS authorization when needed. See [preset-flow changes](docs/preset-activation-upgrade.md).
 - A menu bar temperature/RPM summary, temperature history and °C/°F display.
 - Native Vietnamese/English localization with a saved language preference.
@@ -51,7 +54,7 @@ The test suite uses fake hardware; it never writes to real fans. The snapshot CL
 4. Select a fan, choose a policy and click **Áp dụng cho quạt này** (Apply to this fan).
 5. **Tất cả tự động** returns this session's controlled fans to automatic. **Tắt điều khiển** stops the helper after restoration. Closing the main window keeps the menu bar app running; quitting requests restoration and ends the session.
 
-Presets are saved locally and are not automatically applied on startup. Curve thresholds are always expressed in Celsius, including when sensor display uses Fahrenheit. The history chart and menu bar temperature also use Celsius.
+Presets are saved locally and are not automatically applied on startup. Curve thresholds are always expressed in Celsius, including when sensor display uses Fahrenheit. The history chart and menu bar follow the selected display unit; curve settings remain Celsius.
 
 ## Schedules and timers
 
@@ -71,7 +74,7 @@ Restoration is a best-effort hardware operation, not a guarantee. A killed/crash
 
 The helper does not install a persistent system daemon. Its socket is `/var/run/vn.thiendev.myfancontrol-<uid>.sock`, with user-only permissions and kernel peer-UID checks in both directions. Other processes running as the same user can issue the same narrow fan commands; client identity is UID-based, not code-signature based. See [security design](docs/security.md).
 
-If a crashed helper leaves a socket behind, first verify that no `fanctl serve` process remains, return fan control to automatic with a trusted utility (or restart the Mac), and remove only this app's stale socket with administrator privileges. The helper deliberately refuses to overwrite existing paths.
+The helper only removes a stale socket after checking its expected path, type, ownership, inode and refused connection. It refuses to replace an active endpoint or an unrelated path. See the security notes for recovery limits.
 
 ## Development and releases
 
