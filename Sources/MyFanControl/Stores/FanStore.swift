@@ -63,14 +63,20 @@ struct TemperaturePoint: Identifiable {
     self.hardware = hardware
     self.defaults = defaults
     self.schedules = schedules ?? ScheduleStore(defaults: defaults)
-    if let data = defaults.data(forKey: "presets"),
-      let saved = try? JSONDecoder().decode([FanPreset].self, from: data)
-    {
-      presets = saved.filter { (try? $0.validateDefinition()) != nil }
-      if presets.count != saved.count { error = L10n.t("backup.invalidSaved") }
-    } else {
-      presets = []
-    }
+    if let data = defaults.data(forKey: "presets") {
+      do {
+        let saved = try JSONDecoder().decode([FanPreset].self, from: data)
+        presets = saved.filter { (try? $0.validateDefinition()) != nil }
+        if presets.count != saved.count {
+          defaults.set(data, forKey: "invalidPresetsRecovery")
+          error = L10n.t("backup.invalidSaved")
+        }
+      } catch {
+        defaults.set(data, forKey: "invalidPresetsRecovery")
+        presets = []
+        self.error = L10n.t("backup.invalidSaved")
+      }
+    } else { presets = [] }
     if observeSleep {
       sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
         forName: NSWorkspace.willSleepNotification, object: nil, queue: .main

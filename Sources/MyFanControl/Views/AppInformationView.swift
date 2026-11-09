@@ -96,7 +96,7 @@ struct UpdateSection: View {
           Spacer()
           Link(L10n.t("update.allReleases"), destination: AppMetadata.releasesURL)
         }
-        Toggle(L10n.t("update.includePreviews"), isOn: $includePreviews).font(.callout)
+        Toggle(L10n.t("update.includePreviews"), isOn: $includePreviews).font(.callout).disabled(updates.checking)
           .onChange(of: includePreviews) { _, _ in updates.available = nil; updates.message = nil }
         if let message = updates.message { Text(message).font(.callout).textSelection(.enabled) }
         Text(L10n.t("update.privacy")).font(.caption).foregroundStyle(.secondary)

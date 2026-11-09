@@ -69,7 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       FanMenu(store: store)
         .id(language)
     } label: {
-      MenuBarLabel(store: store)
+      MenuBarLabel(store: store).task { delegate.store = store; store.start() }
     }
     Settings { SettingsView(store: store, updates: updates).id(language)
       .environment(\.locale, Locale(identifier: L10n.language)) }
@@ -137,6 +137,8 @@ struct FanMenu: View {
       Menu(L10n.t("menu.applyPreset")) {
         ForEach(store.presets) { preset in
           Button(preset.name + " · " + preset.summary) {
+            openWindow(id: "main")
+            NSApp.activate(ignoringOtherApps: true)
             Task { await store.activate(preset, fanIDs: store.fans.map(\.id)) }
           }
         }
