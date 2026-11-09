@@ -1,7 +1,13 @@
 import FanCore
 import Foundation
 
-actor HardwareService {
+protocol HardwareBackend: Sendable {
+  func read() async throws -> Snapshot
+  func send(_ request: HelperRequest) async throws -> HelperResponse
+  func authorize() async throws
+}
+
+actor HardwareService: HardwareBackend {
   private var smc: SMC?
   func read() throws -> Snapshot {
     if smc == nil { smc = try SMC() }
