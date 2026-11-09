@@ -2,6 +2,7 @@
 dist/
 .DS_Store
 .swiftpm/
+.codex/
 docs/evidence/
 *.xcresult
 *.zip
