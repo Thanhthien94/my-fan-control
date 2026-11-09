@@ -23,6 +23,7 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 cp "$ROOT_DIR/assets/brand/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 cp "$ROOT_DIR/LICENSE" "$APP_BUNDLE/Contents/Resources/LICENSE.txt"
 cp "$ROOT_DIR/THIRD_PARTY_NOTICES.md" "$APP_BUNDLE/Contents/Resources/THIRD_PARTY_NOTICES.md"
+cp "$ROOT_DIR/PRIVACY.md" "$APP_BUNDLE/Contents/Resources/PRIVACY.md"
 cp "$BIN_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp "$BIN_DIR/fanctl" "$APP_BUNDLE/Contents/MacOS/fanctl"
 for RESOURCE in "$BIN_DIR/"*.bundle; do
@@ -48,6 +49,9 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
+SOURCE_REVISION="$(git rev-parse HEAD 2>/dev/null || echo source-archive)"
+/usr/bin/plutil -insert MFCSourceRevision -string "$SOURCE_REVISION" "$APP_BUNDLE/Contents/Info.plist"
+/usr/bin/plutil -insert MFCReleaseLabel -string "$(cat VERSION)" "$APP_BUNDLE/Contents/Info.plist"
 chmod +x "$APP_BUNDLE/Contents/MacOS/"*
 /usr/bin/codesign --force --sign - "$APP_BUNDLE/Contents/MacOS/fanctl"
 /usr/bin/codesign --force --sign - "$APP_BUNDLE"

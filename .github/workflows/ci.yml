@@ -24,3 +24,6 @@ jobs:
         run: ./script/build_and_run.sh --build-only
       - name: Verify ad-hoc app signature
         run: codesign --verify --deep --strict dist/MyFanControl.app
+      - name: Package preview on Apple Silicon
+        if: runner.arch == 'ARM64'
+        run: ./script/package_preview.sh

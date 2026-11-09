@@ -28,25 +28,28 @@ struct ContentView: View {
             .bottom, 16)
       }
       HSplitView {
-        VStack(alignment: .leading, spacing: 16) {
-          Label(L10n.t("ĐIỀU KHIỂN QUẠT"), systemImage: "fan").font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-          if store.fans.isEmpty {
-            ContentUnavailableView(
-              L10n.t("Chưa có dữ liệu quạt"), systemImage: "fan.slash",
-              description: Text(L10n.t("App chỉ hiển thị số đo thật từ AppleSMC.")))
-          } else {
-            ForEach(store.fans) { fan in
-              FanCard(fan: fan, rule: store.active[fan.id], selected: store.selectedFan == fan.id) {
-                store.selectedFan = fan.id
+        ScrollView {
+          VStack(alignment: .leading, spacing: 16) {
+            Label(L10n.t("ĐIỀU KHIỂN QUẠT"), systemImage: "fan").font(.caption.weight(.semibold))
+              .foregroundStyle(.secondary)
+            if store.fans.isEmpty {
+              ContentUnavailableView(
+                L10n.t("Chưa có dữ liệu quạt"), systemImage: "fan.slash",
+                description: Text(L10n.t("App chỉ hiển thị số đo thật từ AppleSMC.")))
+            } else {
+              ForEach(store.fans) { fan in
+                FanCard(fan: fan, rule: store.active[fan.id], selected: store.selectedFan == fan.id)
+                {
+                  store.selectedFan = fan.id
+                }
+              }
+              if let fan = store.fans.first(where: { $0.id == store.selectedFan }) {
+                FanEditor(store: store, fan: fan).id(fan.id)
               }
             }
-            if let fan = store.fans.first(where: { $0.id == store.selectedFan }) {
-              FanEditor(store: store, fan: fan).id(fan.id)
-            }
-          }
-          Spacer(minLength: 0)
-        }.padding(20).frame(minWidth: 360, idealWidth: 420, maxWidth: 500)
+            Spacer(minLength: 0)
+          }.padding(20)
+        }.frame(minWidth: 360, idealWidth: 420, maxWidth: 500)
         VStack(alignment: .leading, spacing: 12) {
           HStack {
             Label(L10n.t("CẢM BIẾN NHIỆT"), systemImage: "thermometer.medium").font(

@@ -166,6 +166,45 @@ struct TemperaturePoint: Identifiable {
       schedules.didRestoreAll()
     } catch { self.error = error.localizedDescription }
   }
+  @discardableResult func applyToAll(_ rule: FanPreset) async -> Bool {
+    guard helperEnabled, !busy else { return false }
+    guard !conflictingApp else {
+      error = L10n.t("Hãy thoát Macs Fan Control trước khi áp dụng.")
+      return false
+    }
+    guard let snapshot, !snapshot.fans.isEmpty, Date().timeIntervalSince(snapshot.date) < 5 else {
+      error = L10n.t("Dữ liệu phần cứng đã cũ. Hãy đợi cập nhật.")
+      return false
+    }
+    busy = true
+    defer { busy = false }
+    do {
+      for fan in snapshot.fans {
+        _ = try rule.target(
+          for: fan, temperature: snapshot.sensors.first(where: { $0.id == rule.sensor })?.celsius)
+      }
+      let result = try await hardware.send(
+        HelperRequest("configureGroup", fanIDs: snapshot.fans.map(\.id), preset: rule))
+      controlled = Set(result.controlled)
+      for fan in snapshot.fans {
+        if controlled.contains(fan.id) {
+          active[fan.id] = rule
+        } else {
+          active.removeValue(forKey: fan.id)
+        }
+        schedules.manualOverride(fanID: fan.id)
+      }
+      helperMessage = result.message
+      error = nil
+      await refresh()
+      return true
+    } catch {
+      let message = error.localizedDescription
+      await refresh()
+      self.error = message
+      return false
+    }
+  }
   func shutdown() async {
     if helperEnabled {
       do {

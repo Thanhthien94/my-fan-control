@@ -10,6 +10,13 @@ struct FanEditor: View {
   @State private var start = 45.0
   @State private var full = 80.0
   @State private var name = ""
+  @State private var applyAll = false
+  private var targetFans: [Fan] { applyAll ? store.fans : [fan] }
+  private var limits: ClosedRange<Double> {
+    let low = targetFans.map(\.minimum).max() ?? fan.minimum
+    let high = targetFans.map(\.maximum).min() ?? fan.maximum
+    return low...max(low + 1, high)
+  }
   private var rule: FanPreset {
     FanPreset(
       name: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? title : name,
@@ -21,8 +28,15 @@ struct FanEditor: View {
   }
   private var validation: String? {
     do {
-      _ = try rule.target(
-        for: fan, temperature: store.sensors.first(where: { $0.id == sensor })?.celsius)
+      if applyAll, mode == .fixed,
+        (targetFans.map(\.minimum).max() ?? 0) >= (targetFans.map(\.maximum).min() ?? 0)
+      {
+        return L10n.t("group.noCommon")
+      }
+      for target in targetFans {
+        _ = try rule.target(
+          for: target, temperature: store.sensors.first(where: { $0.id == sensor })?.celsius)
+      }
       return nil
     } catch { return error.localizedDescription }
   }
@@ -53,6 +67,7 @@ struct FanEditor: View {
         Text(L10n.t("RPM cố định")).tag(FanPreset.Mode.fixed)
         Text(L10n.t("Cảm biến")).tag(FanPreset.Mode.sensor)
       }.pickerStyle(.segmented)
+      if store.fans.count > 1 { Toggle(L10n.t("group.all"), isOn: $applyAll) }
       switch mode {
       case .automatic:
         Text(L10n.t("Giao quyền điều chỉnh tốc độ cho macOS.")).foregroundStyle(.secondary).font(
@@ -63,13 +78,13 @@ struct FanEditor: View {
           Spacer()
           Text("\(Int(rpm)) RPM").monospacedDigit().fontWeight(.medium)
         }
-        Slider(value: $rpm, in: fan.minimum...fan.maximum, step: 50) {
+        Slider(value: $rpm, in: limits, step: 50) {
           Text(L10n.t("RPM mục tiêu"))
         }
         HStack {
-          Text("\(Int(fan.minimum)) RPM")
+          Text("\(Int(limits.lowerBound)) RPM")
           Spacer()
-          Text("\(Int(fan.maximum)) RPM")
+          Text("\(Int(limits.upperBound)) RPM")
         }.font(.caption).foregroundStyle(.secondary)
       case .sensor:
         Picker(L10n.t("Cảm biến"), selection: $sensor) {
@@ -103,15 +118,24 @@ struct FanEditor: View {
             validation != nil || store.presets.count >= 50)
         }
         Spacer()
-        Button(L10n.t("Áp dụng cho quạt này")) { Task { await store.apply(rule, to: fan.id) } }
-          .buttonStyle(.borderedProminent).disabled(
-            !store.helperEnabled || store.busy || validation != nil)
+        Button(applyAll ? L10n.t("group.apply") : L10n.t("Áp dụng cho quạt này")) {
+          Task {
+            if applyAll {
+              await store.applyToAll(rule)
+            } else {
+              await store.apply(rule, to: fan.id)
+            }
+          }
+        }
+        .buttonStyle(.borderedProminent).disabled(
+          !store.helperEnabled || store.busy || validation != nil)
       }
       if !store.helperEnabled {
         Text(L10n.t("Bấm “Bật điều khiển…” để macOS hỏi quyền quản trị khi bạn muốn áp dụng."))
           .font(.caption).foregroundStyle(.secondary)
       }
     }.textFieldStyle(.roundedBorder)
+      .onChange(of: applyAll) { _, _ in rpm = min(limits.upperBound, max(limits.lowerBound, rpm)) }
       .onAppear {
         rpm = min(fan.maximum, max(fan.minimum, 2500))
         sensor = store.hottest?.id ?? ""

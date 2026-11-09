@@ -84,4 +84,35 @@ public final class ControlSession {
       notice = nil
     }
   }
+  public func configureGroup(ids: [Int], rule: FanPreset) throws {
+    guard !ids.isEmpty, ids.count <= 10, Set(ids).count == ids.count,
+      ids.allSatisfy({ (0..<10).contains($0) })
+    else {
+      throw FanError.invalid(L10n.t("group.invalid"))
+    }
+    let snapshot = try hardware.snapshot()
+    // Validate the entire group before the first write. Each configure also rereads telemetry.
+    for id in ids {
+      guard let fan = snapshot.fans.first(where: { $0.id == id }) else {
+        throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
+      }
+      _ = try rule.target(
+        for: fan, temperature: snapshot.sensors.first(where: { $0.id == rule.sensor })?.celsius)
+    }
+    var touched = Set<Int>()
+    do {
+      for id in ids.sorted() {
+        touched.insert(id)
+        try configure(id: id, rule: rule)
+      }
+    } catch {
+      // Physical writes are sequential, so failure returns the touched group to automatic.
+      for id in touched {
+        rules.removeValue(forKey: id)
+        owned.insert(id)
+      }
+      restoreOrphans()
+      throw error
+    }
+  }
 }
