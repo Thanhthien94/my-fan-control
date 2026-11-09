@@ -20,7 +20,7 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 - Delayed countdowns, one-off date schedules, and weekly schedules per fan/preset, with bounded durations, conflict checks, cancellation, activity history and automatic-mode restoration.
 - An on-demand privileged helper with a ten-second client lease and automatic-mode restoration attempts on expired leases, telemetry loss, high temperatures, write errors and normal termination.
 
-See the [Apple Silicon compatibility matrix](docs/apple-silicon-compatibility.md) for the next candidate, evidence by family and a read-only community report.
+See the [Apple Silicon compatibility matrix](docs/apple-silicon-compatibility.md) for evidence by family and a read-only community report.
 
 ## Requirements and build
 

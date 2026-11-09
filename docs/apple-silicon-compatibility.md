@@ -1,6 +1,6 @@
 # Apple Silicon compatibility
 
-Version 0.2.0 remains the published preview. The following describes the next candidate, `0.2.1-preview.1`, and does not certify untested hardware.
+This matrix describes preview `0.2.1-preview.1`. Capability handling and injected tests do not certify untested hardware.
 
 | Mac family | Monitoring and fan topology | Control path | Evidence |
 | --- | --- | --- | --- |
@@ -18,11 +18,10 @@ Control detects lowercase `F<id>md`, uppercase `F<id>Md`, and a validated legacy
 
 ## Read-only community report
 
-From a source build of the next candidate:
+From an installed 0.2.1 preview:
 
 ```sh
-./script/build_and_run.sh --build-only
-./dist/MyFanControl.app/Contents/MacOS/fanctl compatibility
+/Applications/MyFanControl.app/Contents/MacOS/fanctl compatibility
 ```
 
 The JSON reports chip, model identifier, fan count/status, reported RPM bounds, mode-key availability, optional handoff gate and sensor counts. It does not request administrator access, write SMC keys or include serial numbers/user names. It does not send data anywhere. Review it before sharing it in a GitHub issue. Version 0.2.0 does not include this new command.
