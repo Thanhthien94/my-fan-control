@@ -4,11 +4,19 @@ import SwiftUI
 
 struct ContentView: View {
   var store: FanStore
+  @Environment(\.openWindow) private var openWindow
   @State private var search = ""
   @State private var selectedSensor: String?
   @State private var showUnknown = false
   @State private var showSchedules = false
   @AppStorage("fahrenheit") private var fahrenheit = false
+  @AppStorage("historyMinutes") private var historyMinutes = 10
+  private var unit: TemperatureUnit { fahrenheit ? .fahrenheit : .celsius }
+  private var visibleHistory: [TemperaturePoint] {
+    let window = [10, 30, 60].contains(historyMinutes) ? historyMinutes : 10
+    let cutoff = Date().addingTimeInterval(-Double(window) * 60)
+    return store.history.filter { $0.date >= cutoff }
+  }
   private var visibleSensors: [Sensor] {
     store.sensors.filter { sensor in
       let info = SensorCatalog.lookup(sensor.id)
@@ -99,7 +107,7 @@ struct ContentView: View {
                 .secondary)
             }.width(55)
             TableColumn(fahrenheit ? "°F" : "°C") { sensor in
-              Text(String(format: "%.1f", fahrenheit ? sensor.celsius * 1.8 + 32 : sensor.celsius))
+              Text(String(format: "%.1f", unit.value(sensor.celsius)))
                 .monospacedDigit().foregroundStyle(sensor.celsius >= 80 ? .orange : .primary)
             }.width(60)
           }.frame(minHeight: 160)
@@ -127,6 +135,10 @@ struct ContentView: View {
     }
     .toolbar {
       ToolbarItemGroup {
+        Button { openWindow(id: "about") } label: {
+          Label(L10n.t("legal.about"), systemImage: "info.circle")
+        }
+        SettingsLink { Label(L10n.t("Cài đặt…"), systemImage: "gearshape") }
         Button {
           showSchedules = true
         } label: {
@@ -199,13 +211,13 @@ struct ContentView: View {
   }
   private var history: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text(L10n.t("Nhiệt độ cao nhất · 10 phút gần đây")).font(.caption).foregroundStyle(.secondary)
-      Chart(store.history) { point in
-        AreaMark(x: .value(L10n.t("Thời gian"), point.date), y: .value("°C", point.temperature))
+      Text(L10n.f("history.title", historyMinutes)).font(.caption).foregroundStyle(.secondary)
+      Chart(visibleHistory) { point in
+        AreaMark(x: .value(L10n.t("Thời gian"), point.date), y: .value(unit.symbol, unit.value(point.temperature)))
           .foregroundStyle(.blue.opacity(0.1))
-        LineMark(x: .value(L10n.t("Thời gian"), point.date), y: .value("°C", point.temperature))
+        LineMark(x: .value(L10n.t("Thời gian"), point.date), y: .value(unit.symbol, unit.value(point.temperature)))
           .foregroundStyle(.blue).lineStyle(StrokeStyle(lineWidth: 1.5))
-      }.chartYScale(domain: 0...110).chartXAxis(.hidden)
+      }.chartYScale(domain: unit.value(0)...unit.value(110)).chartXAxis(.hidden)
     }
   }
 }

@@ -85,6 +85,18 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
     self.start = start
     self.full = full
   }
+  public func validateDefinition() throws {
+    guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.count <= 80,
+      rpm.isFinite, start.isFinite, full.isFinite, rpm >= 0, rpm <= 20000 else {
+      throw FanError.invalid(L10n.t("preset.invalidDefinition"))
+    }
+    if mode == .sensor {
+      guard sensor.utf8.count == 4, sensor.utf8.allSatisfy({ (32...126).contains($0) }),
+        start >= 20, full <= 90, full - start >= 5 else {
+        throw FanError.invalid(L10n.t("preset.invalidDefinition"))
+      }
+    }
+  }
   public func target(for fan: Fan, temperature: Double?) throws -> Double? {
     guard fan.minimum.isFinite, fan.maximum.isFinite, fan.minimum >= 0,
       fan.maximum > fan.minimum, fan.maximum <= 20000

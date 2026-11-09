@@ -77,8 +77,8 @@ struct ScheduleRow: View {
       HStack {
         Toggle(
           item.name,
-          isOn: Binding(get: { item.enabled }, set: { store.schedules.setEnabled(item.id, $0) })
-        ).fontWeight(.semibold)
+          isOn: Binding(get: { item.enabled }, set: { enabled in Task { await store.schedules.changeEnabled(item.id, enabled, store: store) } })
+        ).fontWeight(.semibold).disabled(store.busy)
         Spacer()
         Button(L10n.t("schedule.edit"), action: edit)
         Button(role: .destructive) {
@@ -98,8 +98,8 @@ struct ScheduleRow: View {
       ).font(.caption).foregroundStyle(.secondary)
       if let run {
         HStack {
-          Label(L10n.t("schedule.running"), systemImage: "timer").foregroundStyle(.green)
-          Text(run.endsAt, style: .timer).monospacedDigit()
+          Label(L10n.t(run.stopping ? "schedule.restorePending" : "schedule.running"), systemImage: "timer").foregroundStyle(.green)
+          if !run.stopping { Text(run.endsAt, style: .timer).monospacedDigit() }
           Spacer()
           Button(L10n.t("schedule.cancel")) {
             Task { await store.schedules.cancel(item.id, store: store) }

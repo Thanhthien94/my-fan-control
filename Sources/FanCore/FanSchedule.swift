@@ -22,6 +22,7 @@ public struct FanSchedule: Codable, Identifiable, Equatable, Sendable {
     self.timing = timing
   }
   public func validate() throws {
+    try preset.validateDefinition()
     guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.count <= 100,
       !fanIDs.isEmpty, Set(fanIDs).count == fanIDs.count,
       fanIDs.allSatisfy({ (0..<10).contains($0) }),

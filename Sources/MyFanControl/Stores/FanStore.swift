@@ -66,7 +66,8 @@ struct TemperaturePoint: Identifiable {
     if let data = defaults.data(forKey: "presets"),
       let saved = try? JSONDecoder().decode([FanPreset].self, from: data)
     {
-      presets = saved
+      presets = saved.filter { (try? $0.validateDefinition()) != nil }
+      if presets.count != saved.count { error = L10n.t("backup.invalidSaved") }
     } else {
       presets = []
     }
@@ -97,7 +98,7 @@ struct TemperaturePoint: Identifiable {
       if let hottest {
         history.append(TemperaturePoint(date: reading.date, temperature: hottest.celsius))
       }
-      if history.count > 300 { history.removeFirst(history.count - 300) }
+      if history.count > 1800 { history.removeFirst(history.count - 1800) }
       if !fans.contains(where: { $0.id == selectedFan }) { selectedFan = fans.first?.id ?? 0 }
     } catch {
       self.telemetryError = error.localizedDescription
@@ -277,6 +278,10 @@ struct TemperaturePoint: Identifiable {
       error = L10n.t("preset.limit")
       return nil
     }
+    do { try saved.validateDefinition() } catch {
+      self.error = error.localizedDescription
+      return nil
+    }
     var updated = presets
     if let index = updated.firstIndex(where: { $0.id == saved.id }) {
       updated[index] = saved
@@ -340,6 +345,35 @@ struct TemperaturePoint: Identifiable {
       error = helperMessage ?? L10n.t("preset.notActive")
     }
     return success
+  }
+  func exportBackup() throws -> Data {
+    try ConfigurationBackup(presets: presets, schedules: schedules.items).encoded()
+  }
+  func backupPlan(_ data: Data) throws -> ConfigurationBackup {
+    try ConfigurationBackup.decode(data).merge(presets: presets, schedules: schedules.items)
+  }
+  func importBackup(_ data: Data) throws {
+    guard !busy else { throw FanError.invalid(L10n.t("operation.busy")) }
+    let plan = try backupPlan(data)
+    let encoded = try JSONEncoder().encode(plan.presets)
+    defaults.set(encoded, forKey: "presets")
+    presets = plan.presets
+    schedules.replaceFromBackup(plan.schedules)
+  }
+  func diagnosticsData() async throws -> Data {
+    struct Report: Encodable {
+      let appVersion: String
+      let build: String
+      let revision: String
+      let macOS: String
+      let hardware: CompatibilityReport
+    }
+    let meta = AppMetadata()
+    let report = try await hardware.diagnostics()
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    return try encoder.encode(Report(appVersion: meta.version, build: meta.build,
+      revision: meta.revision, macOS: ProcessInfo.processInfo.operatingSystemVersionString, hardware: report))
   }
   func deletePreset(_ id: UUID) {
     let name = presets.first(where: { $0.id == id })?.name ?? ""
