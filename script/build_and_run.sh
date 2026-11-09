@@ -17,8 +17,8 @@ if [[ "$MODE" != --build-only ]] && /usr/bin/pgrep -x "$APP_NAME" >/dev/null; th
   if /usr/bin/pgrep -x "$APP_NAME" >/dev/null; then echo "App is still restoring controls. Close it before rebuilding." >&2; exit 1; fi
 fi
 CONFIGURATION="${MFC_CONFIGURATION:-debug}"
-swift build --configuration "$CONFIGURATION" "${MFC_SWIFT_ARGS[@]}"
-BIN_DIR="$(swift build --configuration "$CONFIGURATION" "${MFC_SWIFT_ARGS[@]}" --show-bin-path)"
+swift build --configuration "$CONFIGURATION" ${MFC_SWIFT_ARGS[@]+"${MFC_SWIFT_ARGS[@]}"}
+BIN_DIR="$(swift build --configuration "$CONFIGURATION" ${MFC_SWIFT_ARGS[@]+"${MFC_SWIFT_ARGS[@]}"} --show-bin-path)"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 cp "$ROOT_DIR/assets/brand/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 cp "$BIN_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"

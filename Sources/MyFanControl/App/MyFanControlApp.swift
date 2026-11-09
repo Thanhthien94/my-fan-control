@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   var store: FanStore?
   func applicationDidFinishLaunching(_ notification: Notification) {
     NSApp.setActivationPolicy(.regular)
+    NSApp.applicationIconImage = AppIdentity.icon
     NSApp.activate(ignoringOtherApps: true)
   }
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

@@ -123,7 +123,7 @@ struct ContentView: View {
   }
   private var overview: some View {
     HStack(alignment: .center, spacing: 24) {
-      Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 54, height: 54)
+      Image(nsImage: AppIdentity.icon).resizable().frame(width: 54, height: 54)
       VStack(alignment: .leading, spacing: 4) {
         Text("My Fan Control").font(.title2.weight(.semibold))
         Text(L10n.t("Nhiệt độ rõ ràng. Làm mát theo cách của bạn.")).font(.callout).foregroundStyle(
