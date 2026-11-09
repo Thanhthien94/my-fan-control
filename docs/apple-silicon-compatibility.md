@@ -1,6 +1,6 @@
 # Apple Silicon compatibility
 
-This matrix describes preview `0.2.1-preview.1`. Capability handling and injected tests do not certify untested hardware.
+This matrix describes capability handling in previews `0.2.1-preview.1` and `0.3.0-preview.1`. Capability handling and injected tests do not certify untested hardware.
 
 | Mac family | Monitoring and fan topology | Control path | Evidence |
 | --- | --- | --- | --- |
