@@ -14,6 +14,7 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 - Automatic control, bounded fixed RPM, and a linear temperature-based fan curve per fan.
 - One shared manual control for all fans, with per-fan limit validation and rollback on partial failure.
 - Save and reuse named fan presets locally.
+- Visible preset selection, update/copy actions, and a direct Apply flow that requests macOS authorization when needed. See [preset-flow changes](docs/preset-activation-upgrade.md).
 - A menu bar temperature/RPM summary, temperature history and °C/°F display.
 - Native Vietnamese/English localization with a saved language preference.
 - Delayed countdowns, one-off date schedules, and weekly schedules per fan/preset, with bounded durations, conflict checks, cancellation, activity history and automatic-mode restoration.

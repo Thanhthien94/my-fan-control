@@ -4,6 +4,54 @@ import Foundation
 
 do {
   let args = Array(CommandLine.arguments.dropFirst())
+  if args.count == 5, args[0] == "retire", args[1] == "--uid", args[3] == "--pid",
+    let uid = UInt32(args[2]), let pid = Int32(args[4]), uid > 0, pid > 1, pid != getpid(),
+    geteuid() == 0
+  {
+    // The old endpoint accepts only the GUI user's credential, including during a root repair.
+    guard seteuid(uid) == 0 else {
+      throw FanError.invalid("Could not verify controller peer identity.")
+    }
+    let peer = HelperClient.serverPID(uid: uid)
+    guard seteuid(0) == 0 else {
+      throw FanError.invalid("Could not restore controller repair privileges.")
+    }
+    guard peer == pid else {
+      throw FanError.invalid("Controller process identity changed.")
+    }
+    let smc = try SMC()
+    guard try smc.number("Ftst") == 0, try smc.snapshot().fans.allSatisfy({ !$0.manual }) else {
+      throw FanError.invalid(
+        "Return fans to system automatic before restarting the legacy controller.")
+    }
+    let query = Process()
+    query.executableURL = URL(fileURLWithPath: "/bin/ps")
+    query.arguments = ["-p", String(pid), "-o", "comm="]
+    let output = Pipe()
+    query.standardOutput = output
+    try query.run()
+    query.waitUntilExit()
+    let actual = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let expected = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+    guard query.terminationStatus == 0,
+      URL(fileURLWithPath: actual).resolvingSymlinksInPath().path == expected
+    else { throw FanError.invalid("Legacy controller executable does not match this app.") }
+    guard kill(pid, SIGKILL) == 0 else {
+      throw FanError.invalid("Could not retire the inactive legacy controller.")
+    }
+    for _ in 0..<40 {
+      if kill(pid, 0) != 0 { break }
+      usleep(50_000)
+    }
+    print("Inactive legacy controller retired")
+    exit(0)
+  }
+  if args == ["check"] {
+    _ = try SMC().snapshot()
+    print("AppleSMC ready")
+    exit(0)
+  }
   if args.isEmpty || args == ["snapshot"] {
     let snapshot = try SMC().snapshot()
     let encoder = JSONEncoder()

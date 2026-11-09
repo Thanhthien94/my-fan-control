@@ -5,17 +5,30 @@ protocol HardwareBackend: Sendable {
   func read() async throws -> Snapshot
   func send(_ request: HelperRequest) async throws -> HelperResponse
   func authorize() async throws
+  func authorizationFailure() async -> String?
+  func cancelAuthorization() async
+}
+extension HardwareBackend {
+  func authorizationFailure() async -> String? { nil }
+  func cancelAuthorization() async {}
 }
 
 actor HardwareService: HardwareBackend {
   private var smc: SMC?
+  private var authorizationProcess: Process?
+  private var authorizationID = UUID()
+  private var startupFailure: String?
   func read() throws -> Snapshot {
     if smc == nil { smc = try SMC() }
-    return try smc!.snapshot()
+    do { return try smc!.snapshot() } catch {
+      smc = nil
+      throw error
+    }  // Reconnect after wake or an invalidated IOKit connection.
   }
   func send(_ request: HelperRequest) throws -> HelperResponse { try HelperClient.request(request) }
 
   func authorize() throws {
+    if authorizationProcess?.isRunning == true { return }
     guard let helper = Bundle.main.url(forAuxiliaryExecutable: "fanctl"),
       FileManager.default.isExecutableFile(atPath: helper.path)
     else {
@@ -25,7 +38,15 @@ actor HardwareService: HardwareBackend {
     func quote(_ s: String) -> String {
       "'" + s.replacingOccurrences(of: "'", with: "'\"'\"'") + "'"
     }
-    let shell = "/usr/bin/nohup \(quote(helper.path)) serve --uid \(getuid()) >/dev/null 2>&1 &"
+    // Keep the authorized service in the foreground of its launcher. Return immediately
+    // and let the GUI handshake concurrently; no detached shell jobs or swallowed errors.
+    var repair = ""
+    if let status = try? HelperClient.request(HelperRequest("status")), status.protocolVersion != 3,
+      let pid = HelperClient.serverPID()
+    {
+      repair = "\(quote(helper.path)) retire --uid \(getuid()) --pid \(pid); "
+    }
+    let shell = "set -e; \(repair)exec \(quote(helper.path)) serve --uid \(getuid())"
     let literal =
       "\""
       + shell.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(
@@ -36,15 +57,35 @@ actor HardwareService: HardwareBackend {
     let errors = Pipe()
     process.standardError = errors
     process.standardOutput = FileHandle.nullDevice
-    try process.run()
-    process.waitUntilExit()
-    guard process.terminationStatus == 0 else {
+    process.standardInput = FileHandle.nullDevice
+    let id = UUID()
+    authorizationID = id
+    startupFailure = nil
+    process.terminationHandler = { [weak self] finished in
       let message = String(
         decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-      throw FanError.helper(
-        message.contains("-128")
-          ? L10n.t("Đã hủy cấp quyền.")
-          : L10n.f("error.authorization", message.trimmingCharacters(in: .whitespacesAndNewlines)))
+      Task {
+        await self?.authorizationDidExit(
+          id: id, status: finished.terminationStatus, message: message)
+      }
     }
+    try process.run()
+    authorizationProcess = process
+  }
+  private func authorizationDidExit(id: UUID, status: Int32, message: String) {
+    guard id == authorizationID else { return }
+    authorizationProcess = nil
+    if status != 0 {
+      startupFailure =
+        message.contains("-128")
+        ? L10n.t("Đã hủy cấp quyền.")
+        : L10n.f(
+          "preset.startFailure",
+          String(message.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1200)))
+    }
+  }
+  func authorizationFailure() -> String? { startupFailure }
+  func cancelAuthorization() {
+    if authorizationProcess?.isRunning == true { authorizationProcess?.terminate() }
   }
 }

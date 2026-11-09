@@ -12,8 +12,11 @@ public final class ControlSession {
   private let hardware: FanHardware
   private var rules = [Int: FanPreset]()
   public private(set) var owned = Set<Int>()
+  public var activeIDs: Set<Int> { Set(rules.keys) }
+  public var restoringIDs: Set<Int> { owned.subtracting(activeIDs) }
   public private(set) var notice: String?
   public init(hardware: FanHardware) { self.hardware = hardware }
+  public func acknowledgeNotice() { notice = nil }
 
   @discardableResult public func restoreAll() -> Bool {
     rules.removeAll()

@@ -19,6 +19,10 @@ struct ScheduleDashboard: View {
         Button(L10n.t("schedule.close")) { dismiss() }.keyboardShortcut(.cancelAction)
       }
       Text(L10n.t("schedule.requirements")).font(.callout).foregroundStyle(.secondary)
+      if !store.helperEnabled {
+        Button(L10n.t("Bật điều khiển…")) { Task { await store.enable() } }.disabled(store.busy)
+      }
+      if let error = store.error { Text(error).font(.callout).foregroundStyle(.orange) }
       if store.presets.filter({ $0.mode != .automatic }).isEmpty {
         Text(L10n.t("schedule.needPreset")).font(.callout).foregroundStyle(.orange)
       }

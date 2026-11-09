@@ -21,35 +21,58 @@ struct ContentView: View {
   var body: some View {
     VStack(spacing: 0) {
       overview.padding(24)
-      if let message = store.error ?? store.helperMessage {
+      if let message = store.error ?? store.helperMessage ?? store.telemetryError {
         Label(message, systemImage: "exclamationmark.triangle.fill")
           .font(.callout).foregroundStyle(.orange).textSelection(.enabled)
           .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(
             .bottom, 16)
       }
+      if let message = store.operationMessage, store.error == nil {
+        Label(message, systemImage: "checkmark.circle.fill").font(.callout).foregroundStyle(.green)
+          .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(
+            .bottom, 12)
+      }
       HSplitView {
-        ScrollView {
-          VStack(alignment: .leading, spacing: 16) {
-            Label(L10n.t("ĐIỀU KHIỂN QUẠT"), systemImage: "fan").font(.caption.weight(.semibold))
-              .foregroundStyle(.secondary)
-            if store.fans.isEmpty {
-              ContentUnavailableView(
-                L10n.t("Chưa có dữ liệu quạt"), systemImage: "fan.slash",
-                description: Text(L10n.t("App chỉ hiển thị số đo thật từ AppleSMC.")))
-            } else {
-              ForEach(store.fans) { fan in
-                FanCard(fan: fan, rule: store.active[fan.id], selected: store.selectedFan == fan.id)
-                {
-                  store.selectedFan = fan.id
+        VStack(alignment: .leading, spacing: 12) {
+          Label(L10n.t("ĐIỀU KHIỂN QUẠT"), systemImage: "fan").font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+          if store.fans.isEmpty {
+            ContentUnavailableView(
+              L10n.t("Chưa có dữ liệu quạt"), systemImage: "fan.slash",
+              description: Text(L10n.t("App chỉ hiển thị số đo thật từ AppleSMC.")))
+          } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+              HStack(spacing: 8) {
+                ForEach(store.fans) { fan in
+                  Button {
+                    store.selectedFan = fan.id
+                  } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                      Text(fan.name).font(.callout.weight(.semibold))
+                      Text("\(Int(fan.current)) RPM").font(.system(.title3, design: .rounded))
+                        .monospacedDigit()
+                      Text(
+                        store.active[fan.id]?.name
+                          ?? (fan.manual ? L10n.t("Thủ công") : L10n.t("Tự động"))
+                      ).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }.frame(minWidth: 135, maxWidth: .infinity, alignment: .leading).padding(10)
+                      .background(
+                        store.selectedFan == fan.id
+                          ? Color.accentColor.opacity(0.1) : Color.secondary.opacity(0.04),
+                        in: RoundedRectangle(cornerRadius: 8)
+                      )
+                      .overlay(
+                        RoundedRectangle(cornerRadius: 8).stroke(
+                          store.selectedFan == fan.id ? Color.accentColor.opacity(0.5) : .clear))
+                  }.buttonStyle(.plain)
                 }
               }
-              if let fan = store.fans.first(where: { $0.id == store.selectedFan }) {
-                FanEditor(store: store, fan: fan).id(fan.id)
-              }
+            }.fixedSize(horizontal: false, vertical: true)
+            if let fan = store.fans.first(where: { $0.id == store.selectedFan }) {
+              FanEditor(store: store, fan: fan)
             }
-            Spacer(minLength: 0)
-          }.padding(20)
-        }.frame(minWidth: 360, idealWidth: 420, maxWidth: 500)
+          }
+        }.padding(20).frame(minWidth: 390, idealWidth: 450, maxWidth: 520)
         VStack(alignment: .leading, spacing: 12) {
           HStack {
             Label(L10n.t("CẢM BIẾN NHIỆT"), systemImage: "thermometer.medium").font(
@@ -182,43 +205,5 @@ struct ContentView: View {
           .foregroundStyle(.blue).lineStyle(StrokeStyle(lineWidth: 1.5))
       }.chartYScale(domain: 0...110).chartXAxis(.hidden)
     }
-  }
-}
-
-struct FanCard: View {
-  var fan: Fan
-  var rule: FanPreset?
-  var selected: Bool
-  var action: () -> Void
-  var body: some View {
-    Button(action: action) {
-      HStack(spacing: 12) {
-        Image(systemName: "fan.fill").font(.title2).foregroundStyle(
-          selected ? Color.accentColor : .secondary)
-        VStack(alignment: .leading, spacing: 4) {
-          Text(fan.name).font(.headline)
-          Text(
-            rule?.name
-              ?? (fan.manual ? L10n.t("Đang ở chế độ thủ công") : L10n.t("Tự động hệ thống"))
-          )
-          .font(.caption).foregroundStyle(.secondary)
-        }
-        Spacer()
-        VStack(alignment: .trailing, spacing: 4) {
-          Text("\(Int(fan.current))").font(.system(.title2, design: .rounded).weight(.medium))
-            .monospacedDigit()
-          Text("RPM · \(Int(fan.minimum))–\(Int(fan.maximum))").font(.caption).foregroundStyle(
-            .secondary)
-        }
-      }.padding(14).background(
-        selected ? Color.accentColor.opacity(0.08) : Color.secondary.opacity(0.04),
-        in: RoundedRectangle(cornerRadius: 10)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: 10).stroke(
-          selected ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.15))
-      )
-      .contentShape(Rectangle())
-    }.buttonStyle(.plain).accessibilityLabel("\(fan.name), \(Int(fan.current)) RPM")
   }
 }

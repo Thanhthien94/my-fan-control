@@ -10,7 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     NSApp.activate(ignoringOtherApps: true)
   }
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    guard let store, store.helperEnabled else { return .terminateNow }
+    guard let store else { return .terminateNow }
     Task { @MainActor in
       await store.shutdown()
       sender.reply(toApplicationShouldTerminate: true)
@@ -28,13 +28,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       ContentView(store: store)
         .id(language)
         .environment(\.locale, Locale(identifier: L10n.language))
-        .frame(minWidth: 1000, minHeight: 700)
+        .frame(minWidth: 1000, minHeight: 760)
         .task {
           delegate.store = store
           store.start()
         }
     }
-    .defaultSize(width: 1080, height: 740)
+    .defaultSize(width: 1080, height: 820)
     .commands {
       CommandGroup(replacing: .appInfo) {
         Button(L10n.t("legal.about")) {

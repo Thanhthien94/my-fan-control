@@ -79,8 +79,8 @@ public final class SMC {
         minimum >= 0, maximum > minimum, maximum <= 20000
       else { throw FanError.invalid(L10n.f("error.fanData", i)) }
       let manual: Bool
-      if let mode = try? number("F\(i)Md") {
-        manual = mode == 1
+      if let mode = (try? number("F\(i)md")) ?? (try? number("F\(i)Md")) {
+        manual = FanKeyController.isManual(mode: mode, gate: try? number("Ftst"))
       } else {
         manual = (Int((try? number("FS! ")) ?? 0) & (1 << i)) != 0
       }
@@ -131,38 +131,11 @@ public final class SMC {
     let result = mfc_write(connection, key, &value)
     guard result == 0 else { throw FanError.read(key, result) }
   }
+  private lazy var fanController = FanKeyController(
+    read: { [unowned self] in try self.number($0) },
+    write: { [unowned self] in try self.writeNumber($0, $1) })
   public func setTarget(fan: Fan, rpm: Double) throws {
-    guard (0..<10).contains(fan.id), rpm.isFinite, rpm >= fan.minimum, rpm <= fan.maximum else {
-      throw FanError.invalid(L10n.t("RPM nằm ngoài giới hạn phần cứng."))
-    }
-    // Set a bounded target before enabling manual mode.
-    try writeNumber("F\(fan.id)Tg", rpm)
-    try setManual(fan.id, true)
-    guard let target = try? number("F\(fan.id)Tg"), abs(target - rpm) < 2 else {
-      try? restore(fan.id)
-      throw FanError.invalid(L10n.t("SMC không xác nhận RPM mục tiêu."))
-    }
+    try fanController.setTarget(fan: fan, rpm: rpm)
   }
-  private func setManual(_ id: Int, _ manual: Bool) throws {
-    if (try? read("F\(id)Md")) != nil {
-      try writeNumber("F\(id)Md", manual ? 1 : 0)
-    } else {
-      let existing = Int(try number("FS! "))
-      let mask = 1 << id
-      try writeNumber("FS! ", Double(manual ? existing | mask : existing & ~mask))
-    }
-    let actual: Bool
-    if let mode = try? number("F\(id)Md") {
-      actual = mode == 1
-    } else {
-      actual = (Int(try number("FS! ")) & (1 << id)) != 0
-    }
-    guard actual == manual else {
-      throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
-    }
-  }
-  public func restore(_ id: Int) throws {
-    guard (0..<10).contains(id) else { throw FanError.invalid(L10n.t("Fan ID không hợp lệ.")) }
-    try setManual(id, false)
-  }
+  public func restore(_ id: Int) throws { try fanController.restore(id) }
 }

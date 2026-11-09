@@ -12,10 +12,13 @@ struct TemperaturePoint: Identifiable {
   let schedules: ScheduleStore
   var snapshot: Snapshot?
   var error: String?
+  var telemetryError: String?
+  var operationMessage: String?
   var helperEnabled = false
   var busy = false
   var active = [Int: FanPreset]()
   var controlled = Set<Int>()
+  var restoring = Set<Int>()
   var presets: [FanPreset]
   var history = [TemperaturePoint]()
   var selectedFan = 0
@@ -28,6 +31,25 @@ struct TemperaturePoint: Identifiable {
   var hottest: Sensor? { snapshot?.sensors.max(by: { $0.celsius < $1.celsius }) }
   var fans: [Fan] { snapshot?.fans ?? [] }
   var sensors: [Sensor] { snapshot?.sensors ?? [] }
+  var preferredSensorID: String {
+    let valid = sensors.filter {
+      $0.celsius >= 10 && $0.celsius < 125 && SensorCatalog.lookup($0.id).known
+    }
+    return valid.filter { SensorCatalog.lookup($0.id).component == .cpu }.max(by: {
+      $0.celsius < $1.celsius
+    })?.id
+      ?? valid.max(by: { $0.celsius < $1.celsius })?.id ?? ""
+  }
+  func uniquePresetName(_ base: String) -> String {
+    var name = base
+    var index = 2
+    while presets.contains(where: { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame })
+    {
+      name = "\(base) \(index)"
+      index += 1
+    }
+    return name
+  }
   var conflictingApp: Bool {
     NSWorkspace.shared.runningApplications.contains {
       $0.bundleIdentifier == "com.crystalidea.macsfancontrol"
@@ -71,14 +93,14 @@ struct TemperaturePoint: Identifiable {
       let reading = try await hardware.read()
       snapshot = reading
       lastRead = reading.date
-      error = nil
+      telemetryError = nil
       if let hottest {
         history.append(TemperaturePoint(date: reading.date, temperature: hottest.celsius))
       }
       if history.count > 300 { history.removeFirst(history.count - 300) }
       if !fans.contains(where: { $0.id == selectedFan }) { selectedFan = fans.first?.id ?? 0 }
     } catch {
-      self.error = error.localizedDescription
+      self.telemetryError = error.localizedDescription
       snapshot = nil
       if helperEnabled { await restoreAll() }
     }
@@ -86,7 +108,11 @@ struct TemperaturePoint: Identifiable {
       do {
         let response = try await hardware.send(HelperRequest("status"))
         controlled = Set(response.controlled)
+        restoring = Set(response.restoring ?? [])
         helperMessage = response.message
+        if !Set(active.keys).isSubset(of: controlled), response.message != nil {
+          operationMessage = nil
+        }
         active = active.filter { controlled.contains($0.key) }
       } catch {
         helperEnabled = false
@@ -107,12 +133,15 @@ struct TemperaturePoint: Identifiable {
     defer { busy = false }
     do {
       // Reuse an already-running root helper before asking macOS for authorization.
-      if (try? await hardware.send(HelperRequest("status"))) == nil {
+      if (try? await hardware.send(HelperRequest("status")))?.protocolVersion != 3 {
         try await hardware.authorize()
       }
       var connected = false
-      for _ in 0..<15 {
-        if let result = try? await hardware.send(HelperRequest("status")) {
+      for _ in 0..<600 {
+        if let failure = await hardware.authorizationFailure() { throw FanError.helper(failure) }
+        if let result = try? await hardware.send(HelperRequest("status")),
+          result.protocolVersion == 3
+        {
           controlled = Set(result.controlled)
           connected = true
           break
@@ -120,9 +149,8 @@ struct TemperaturePoint: Identifiable {
         try await Task.sleep(for: .milliseconds(200))
       }
       guard connected else {
-        throw FanError.helper(
-          L10n.t(
-            "Helper chưa kết nối. Nếu còn socket từ một phiên bị crash, xem README để phục hồi."))
+        await hardware.cancelAuthorization()
+        throw FanError.helper(L10n.t("preset.permissionTimeout"))
       }
       helperEnabled = true
       error = nil
@@ -163,6 +191,9 @@ struct TemperaturePoint: Identifiable {
       active = [:]
       controlled = []
       helperMessage = nil
+      restoring = []
+      error = nil
+      operationMessage = L10n.t("preset.alreadyAuto")
       schedules.didRestoreAll()
     } catch { self.error = error.localizedDescription }
   }
@@ -197,7 +228,9 @@ struct TemperaturePoint: Identifiable {
       helperMessage = result.message
       error = nil
       await refresh()
-      return true
+      return snapshot.fans.allSatisfy { fan in
+        rule.mode == .automatic ? !controlled.contains(fan.id) : active[fan.id] == rule
+      }
     } catch {
       let message = error.localizedDescription
       await refresh()
@@ -212,17 +245,106 @@ struct TemperaturePoint: Identifiable {
         helperEnabled = false
         active = [:]
         controlled = []
+        restoring = []
+        error = nil
+        operationMessage = nil
         schedules.didRestoreAll()
       } catch { self.error = error.localizedDescription }
+    } else {
+      await hardware.cancelAuthorization()
     }
   }
-  func save(_ rule: FanPreset) {
-    presets.append(rule)
-    persist()
+  @discardableResult func save(_ rule: FanPreset) -> FanPreset? {
+    var saved = rule
+    saved.name = saved.name.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !saved.name.isEmpty, saved.name.count <= 80 else {
+      error = L10n.t("preset.nameRequired")
+      return nil
+    }
+    let original = presets.first(where: { $0.id == saved.id })
+    guard
+      original?.name == saved.name
+        || !presets.contains(where: {
+          $0.id != saved.id && $0.name.localizedCaseInsensitiveCompare(saved.name) == .orderedSame
+        })
+    else {
+      error = L10n.t("preset.duplicateName")
+      return nil
+    }
+    guard presets.count < 50 || presets.contains(where: { $0.id == saved.id }) else {
+      error = L10n.t("preset.limit")
+      return nil
+    }
+    var updated = presets
+    if let index = updated.firstIndex(where: { $0.id == saved.id }) {
+      updated[index] = saved
+    } else {
+      updated.append(saved)
+    }
+    do {
+      let data = try JSONEncoder().encode(updated)
+      defaults.set(data, forKey: "presets")
+      presets = updated
+      error = nil
+      operationMessage = L10n.f("preset.saved", saved.name)
+      return saved
+    } catch {
+      self.error = error.localizedDescription
+      return nil
+    }
+  }
+  /// Explicit user action may authorize; background schedules never call this method.
+  @discardableResult func activate(_ rule: FanPreset, fanIDs: [Int]) async -> Bool {
+    guard !busy, !fanIDs.isEmpty, Set(fanIDs).count == fanIDs.count else { return false }
+    operationMessage = nil
+    error = nil
+    do {
+      let reading = try await hardware.read()
+      snapshot = reading
+      lastRead = reading.date
+      guard fanIDs.count == 1 || Set(fanIDs) == Set(reading.fans.map(\.id)) else {
+        throw FanError.invalid(L10n.t("group.invalid"))
+      }
+      for id in fanIDs {
+        guard let fan = reading.fans.first(where: { $0.id == id }) else {
+          throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
+        }
+        _ = try rule.target(
+          for: fan, temperature: reading.sensors.first(where: { $0.id == rule.sensor })?.celsius)
+      }
+      if rule.mode == .automatic, !helperEnabled,
+        reading.fans.filter({ fanIDs.contains($0.id) }).allSatisfy({ !$0.manual })
+      {
+        operationMessage = L10n.t("preset.alreadyAuto")
+        return true
+      }
+    } catch {
+      self.error = error.localizedDescription
+      return false
+    }
+    if !helperEnabled { await enable() }
+    guard helperEnabled else { return false }
+    // Authorization can take minutes; never apply against the snapshot from before the prompt.
+    await refresh()
+    let success: Bool
+    if fanIDs.count == 1 {
+      success = await apply(rule, to: fanIDs[0])
+    } else {
+      success = await applyToAll(rule)
+    }
+    if success {
+      operationMessage = L10n.f("preset.applied", rule.name)
+    } else if error == nil {
+      error = helperMessage ?? L10n.t("preset.notActive")
+    }
+    return success
   }
   func deletePreset(_ id: UUID) {
+    let name = presets.first(where: { $0.id == id })?.name ?? ""
     presets.removeAll { $0.id == id }
     persist()
+    error = nil
+    operationMessage = L10n.f("preset.deleted", name)
   }
   private func persist() {
     if let data = try? JSONEncoder().encode(presets) {
