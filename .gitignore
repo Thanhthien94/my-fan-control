@@ -1,0 +1,10 @@
+.build/
+dist/
+.DS_Store
+.swiftpm/
+docs/evidence/
+*.xcresult
+*.zip
+*.dmg
+assets/brand/*-source.png
+assets/brand/*.iconset/
