@@ -1,0 +1,26 @@
+name: macOS CI
+on:
+  push:
+    branches: [main, develop, 'feature/**', 'fix/**', 'release/**', 'hotfix/**']
+  pull_request:
+    branches: [main, develop]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode toolchain
+        run: echo "DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+      - name: Check VI/EN localization
+        run: python3 script/check_localization.py
+      - name: Test policy and failure recovery with fake hardware
+        run: ./script/test.sh
+      - name: Build native app bundle
+        run: ./script/build_and_run.sh --build-only
+      - name: Verify ad-hoc app signature
+        run: codesign --verify --deep --strict dist/MyFanControl.app

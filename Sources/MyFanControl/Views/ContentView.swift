@@ -1,0 +1,214 @@
+import Charts
+import FanCore
+import SwiftUI
+
+struct ContentView: View {
+  var store: FanStore
+  @State private var search = ""
+  @State private var selectedSensor: String?
+  @State private var showUnknown = false
+  @AppStorage("fahrenheit") private var fahrenheit = false
+  private var visibleSensors: [Sensor] {
+    store.sensors.filter { sensor in
+      let info = SensorCatalog.lookup(sensor.id)
+      return (showUnknown || info.known)
+        && (search.isEmpty || sensor.name.localizedCaseInsensitiveContains(search)
+          || sensor.id.localizedCaseInsensitiveContains(search)
+          || info.component.title.localizedCaseInsensitiveContains(search))
+    }
+  }
+  var body: some View {
+    VStack(spacing: 0) {
+      overview.padding(24)
+      if let message = store.error ?? store.helperMessage {
+        Label(message, systemImage: "exclamationmark.triangle.fill")
+          .font(.callout).foregroundStyle(.orange).textSelection(.enabled)
+          .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(
+            .bottom, 16)
+      }
+      HSplitView {
+        VStack(alignment: .leading, spacing: 16) {
+          Label(L10n.t("ĐIỀU KHIỂN QUẠT"), systemImage: "fan").font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+          if store.fans.isEmpty {
+            ContentUnavailableView(
+              L10n.t("Chưa có dữ liệu quạt"), systemImage: "fan.slash",
+              description: Text(L10n.t("App chỉ hiển thị số đo thật từ AppleSMC.")))
+          } else {
+            ForEach(store.fans) { fan in
+              FanCard(fan: fan, rule: store.active[fan.id], selected: store.selectedFan == fan.id) {
+                store.selectedFan = fan.id
+              }
+            }
+            if let fan = store.fans.first(where: { $0.id == store.selectedFan }) {
+              FanEditor(store: store, fan: fan).id(fan.id)
+            }
+          }
+          Spacer(minLength: 0)
+        }.padding(20).frame(minWidth: 360, idealWidth: 420, maxWidth: 500)
+        VStack(alignment: .leading, spacing: 12) {
+          HStack {
+            Label(L10n.t("CẢM BIẾN NHIỆT"), systemImage: "thermometer.medium").font(
+              .caption.weight(.semibold)
+            ).foregroundStyle(.secondary)
+            Spacer()
+            Text(L10n.f("sensors.count", store.sensors.count)).font(.caption).foregroundStyle(
+              .secondary)
+          }
+          TextField(L10n.t("Tìm cảm biến hoặc SMC key"), text: $search).textFieldStyle(
+            .roundedBorder)
+          Toggle(L10n.t("sensors.showUnknown"), isOn: $showUnknown).font(.caption)
+          Table(visibleSensors, selection: $selectedSensor) {
+            TableColumn(L10n.t("Cảm biến")) { sensor in Text(sensor.name) }.width(
+              min: 130, ideal: 180)
+            TableColumn(L10n.t("sensors.module")) { sensor in
+              Text(SensorCatalog.lookup(sensor.id).component.title).font(.caption).foregroundStyle(
+                .secondary)
+            }.width(85)
+            TableColumn("Key") { sensor in
+              Text(sensor.id).font(.system(.caption, design: .monospaced)).foregroundStyle(
+                .secondary)
+            }.width(55)
+            TableColumn(fahrenheit ? "°F" : "°C") { sensor in
+              Text(String(format: "%.1f", fahrenheit ? sensor.celsius * 1.8 + 32 : sensor.celsius))
+                .monospacedDigit().foregroundStyle(sensor.celsius >= 80 ? .orange : .primary)
+            }.width(60)
+          }.frame(minHeight: 160)
+          if let sensor = store.sensors.first(where: { $0.id == selectedSensor })
+            ?? visibleSensors.first
+          {
+            SensorDetailView(sensor: sensor)
+          }
+          history.frame(height: 100)
+        }.padding(20).frame(minWidth: 440, maxWidth: .infinity)
+      }
+      Divider()
+      HStack(spacing: 8) {
+        Circle().fill(store.snapshot == nil ? Color.orange : Color.green).frame(width: 6, height: 6)
+        Text(
+          store.lastRead.map {
+            L10n.f("status.updated", $0.formatted(date: .omitted, time: .standard))
+          } ?? L10n.t("Đang kết nối AppleSMC…"))
+        Spacer()
+        Text(
+          store.helperEnabled
+            ? L10n.t("Quyền điều khiển đã bật") : L10n.t("Chỉ theo dõi · chưa thay đổi tốc độ quạt")
+        )
+      }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 24).padding(.vertical, 12)
+    }
+    .toolbar {
+      ToolbarItemGroup {
+        Button {
+          Task { await store.restoreAll() }
+        } label: {
+          Label(L10n.t("Tất cả tự động"), systemImage: "arrow.uturn.backward")
+        }
+        .disabled(!store.helperEnabled || store.busy)
+        if !store.helperEnabled {
+          Button {
+            Task { await store.enable() }
+          } label: {
+            Label(L10n.t("Bật điều khiển…"), systemImage: "lock.open")
+          }
+          .disabled(store.busy || store.fans.isEmpty)
+        } else {
+          Button {
+            Task { await store.shutdown() }
+          } label: {
+            Label(L10n.t("Tắt điều khiển"), systemImage: "lock")
+          }.disabled(store.busy)
+        }
+      }
+    }
+  }
+  private var overview: some View {
+    HStack(alignment: .center, spacing: 24) {
+      Image(nsImage: AppIdentity.icon).resizable().frame(width: 54, height: 54)
+      VStack(alignment: .leading, spacing: 4) {
+        Text("My Fan Control").font(.title2.weight(.semibold))
+        Text(L10n.t("Nhiệt độ rõ ràng. Làm mát theo cách của bạn.")).font(.callout).foregroundStyle(
+          .secondary)
+      }
+      Spacer()
+      VStack(alignment: .trailing, spacing: 4) {
+        Text(
+          store.hottest.map {
+            String(
+              format: "%.1f%@", fahrenheit ? $0.celsius * 1.8 + 32 : $0.celsius,
+              fahrenheit ? "°F" : "°C")
+          } ?? "—"
+        )
+        .font(.system(size: 30, weight: .medium, design: .rounded)).monospacedDigit()
+        Text(L10n.t("Cảm biến nóng nhất")).font(.caption).foregroundStyle(.secondary)
+      }
+      Divider().frame(height: 42)
+      VStack(alignment: .trailing, spacing: 4) {
+        Text(
+          store.snapshot == nil
+            ? L10n.t("Chưa kết nối")
+            : store.controlled.isEmpty
+              ? (store.fans.contains(where: { $0.manual }) ? L10n.t("Thủ công") : L10n.t("Tự động"))
+              : L10n.t("Tùy chỉnh")
+        ).font(.title3.weight(.medium))
+        Text(
+          store.snapshot == nil
+            ? L10n.t("Đang chờ dữ liệu")
+            : store.controlled.isEmpty
+              ? (store.fans.contains(where: { $0.manual })
+                ? L10n.t("Ngoài phiên điều khiển này") : L10n.t("macOS quản lý quạt"))
+              : L10n.f("status.controlled", store.controlled.count)
+        )
+        .font(.caption).foregroundStyle(.secondary)
+      }
+    }
+  }
+  private var history: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text(L10n.t("Nhiệt độ cao nhất · 10 phút gần đây")).font(.caption).foregroundStyle(.secondary)
+      Chart(store.history) { point in
+        AreaMark(x: .value(L10n.t("Thời gian"), point.date), y: .value("°C", point.temperature))
+          .foregroundStyle(.blue.opacity(0.1))
+        LineMark(x: .value(L10n.t("Thời gian"), point.date), y: .value("°C", point.temperature))
+          .foregroundStyle(.blue).lineStyle(StrokeStyle(lineWidth: 1.5))
+      }.chartYScale(domain: 0...110).chartXAxis(.hidden)
+    }
+  }
+}
+
+struct FanCard: View {
+  var fan: Fan
+  var rule: FanPreset?
+  var selected: Bool
+  var action: () -> Void
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 12) {
+        Image(systemName: "fan.fill").font(.title2).foregroundStyle(
+          selected ? Color.accentColor : .secondary)
+        VStack(alignment: .leading, spacing: 4) {
+          Text(fan.name).font(.headline)
+          Text(
+            rule?.name
+              ?? (fan.manual ? L10n.t("Đang ở chế độ thủ công") : L10n.t("Tự động hệ thống"))
+          )
+          .font(.caption).foregroundStyle(.secondary)
+        }
+        Spacer()
+        VStack(alignment: .trailing, spacing: 4) {
+          Text("\(Int(fan.current))").font(.system(.title2, design: .rounded).weight(.medium))
+            .monospacedDigit()
+          Text("RPM · \(Int(fan.minimum))–\(Int(fan.maximum))").font(.caption).foregroundStyle(
+            .secondary)
+        }
+      }.padding(14).background(
+        selected ? Color.accentColor.opacity(0.08) : Color.secondary.opacity(0.04),
+        in: RoundedRectangle(cornerRadius: 10)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 10).stroke(
+          selected ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.15))
+      )
+      .contentShape(Rectangle())
+    }.buttonStyle(.plain).accessibilityLabel("\(fan.name), \(Int(fan.current)) RPM")
+  }
+}
