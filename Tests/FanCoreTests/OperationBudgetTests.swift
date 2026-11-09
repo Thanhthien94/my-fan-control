@@ -21,6 +21,8 @@ struct OperationBudgetTests {
     }
     #expect(start.duration(to: instant) <= .seconds(25.2))
     #expect(driver.forced.contains(0))
+    #expect(throws: Never.self) { try driver.restore(0) }
+    #expect(driver.forced.isEmpty)
   }
   @Test func oneGroupSharesOneOperationBudget() throws {
     let hardware = BudgetHardware()
