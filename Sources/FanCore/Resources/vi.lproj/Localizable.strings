@@ -204,7 +204,7 @@
 "preset.inUse" = "Đang dùng";
 "preset.notApplied" = "Chưa áp dụng";
 "preset.target" = "Áp dụng cho";
-"preset.allFans" = "Cả hai quạt";
+"preset.allFans" = "Tất cả quạt";
 "preset.systemAuto" = "Tự động macOS";
 "preset.unsaved" = "Có thay đổi chưa lưu · quạt vẫn chạy theo cấu hình cũ.";
 "preset.update" = "Cập nhật preset";
@@ -231,3 +231,7 @@
 "schedule.zeroNow" = "0 = chạy ngay; tối đa 1440 phút.";
 "schedule.runDuration" = "Chạy trong (phút)";
 "schedule.enabled" = "Bật lịch này";
+"compat.noFans" = "SMC không báo có quạt";
+"compat.noFansDetail" = "Bạn vẫn có thể theo dõi nhiệt độ. Máy làm mát thụ động không có quạt để điều khiển.";
+"compat.unavailableFans" = "Dữ liệu quạt chưa có hoặc không hợp lệ. App vẫn hiển thị nhiệt độ đọc được và tắt điều khiển quạt.";
+"sensor.cpu" = "CPU · cảm biến %d";
