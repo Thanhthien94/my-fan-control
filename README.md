@@ -25,6 +25,10 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 
 See the [Apple Silicon compatibility matrix](docs/apple-silicon-compatibility.md) for evidence by family and a read-only community report.
 
+## Measured resource use
+
+On an M4 Pro (14 logical CPUs, 24 GiB, AC power), two 90-second dashboard runs at 1 Hz averaged **12.46–13.95% of one CPU** and **208–213 MiB median kernel memory footprint**; a menu-bar-only run measured **12.32%** and **82.7 MiB**. These are local process measurements, not FPS or cross-device guarantees. See [method, raw-summary JSON and limitations](docs/performance.md).
+
 ## Requirements and build
 
 Download the Apple Silicon preview from [GitHub Releases](https://github.com/Thanhthien94/my-fan-control/releases), then follow [INSTALL.md](INSTALL.md). Preview downloads require macOS's documented Open Anyway step because they are not Developer ID signed/notarized.
