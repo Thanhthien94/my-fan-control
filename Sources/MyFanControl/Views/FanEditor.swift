@@ -9,6 +9,9 @@ struct FanEditor: View {
   private var targetFans: [Fan] { applyAll ? store.fans : [fan] }
   private var saved: FanPreset? { store.presets.first(where: { $0.id == draft.id }) }
   private var unchanged: Bool { saved == draft }
+  private var draftStatus: FanEditorDraftStatus {
+    FanEditorDraftStatus.resolve(draft: draft, saved: saved, applied: applied)
+  }
   private var limits: ClosedRange<Double> {
     let low = targetFans.map(\.minimum).max() ?? fan.minimum
     let high = targetFans.map(\.maximum).min() ?? fan.maximum
@@ -102,8 +105,10 @@ struct FanEditor: View {
             Label(validation, systemImage: "exclamationmark.circle").font(.caption).foregroundStyle(
               .orange)
           }
-          if saved != nil, !unchanged {
+          if draftStatus == .unsavedPreset {
             Text(L10n.t("preset.unsaved")).font(.caption).foregroundStyle(.orange)
+          } else if draftStatus == .automaticPending {
+            Text(L10n.t("preset.autoPending")).font(.caption).foregroundStyle(.secondary)
           }
         }.padding(.vertical, 2)
       }.frame(minHeight: 80, maxHeight: .infinity)
