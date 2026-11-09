@@ -4,9 +4,13 @@ public protocol FanHardware: AnyObject {
   func snapshot() throws -> Snapshot
   func setTarget(fan: Fan, rpm: Double) throws
   func restore(_ id: Int) throws
+  func beginControlOperation()
   func restoreSystemControl() throws -> Bool
 }
-extension FanHardware { public func restoreSystemControl() throws -> Bool { false } }
+extension FanHardware {
+  public func restoreSystemControl() throws -> Bool { false }
+  public func beginControlOperation() {}
+}
 extension SMC: FanHardware {}
 
 /// Used by the privileged helper. No UI state is trusted as hardware telemetry.
@@ -48,6 +52,7 @@ public final class ControlSession {
     restoreOrphans()
     guard !rules.isEmpty else { return }
     do {
+      hardware.beginControlOperation()
       let snapshot = try hardware.snapshot()
       guard ControlSafety.permits(leaseAge: leaseAge, sensors: snapshot.sensors) else {
         throw FanError.invalid(L10n.t("Đã về tự động: nhiệt độ cao, mất cảm biến hoặc hết phiên."))
@@ -69,6 +74,10 @@ public final class ControlSession {
     }
   }
   public func configure(id: Int, rule: FanPreset) throws {
+    hardware.beginControlOperation()
+    try configureWithinOperation(id: id, rule: rule)
+  }
+  private func configureWithinOperation(id: Int, rule: FanPreset) throws {
     guard (0..<10).contains(id) else { throw FanError.invalid(L10n.t("Fan ID không hợp lệ.")) }
     // Read afresh at the privilege boundary; a cached snapshot cannot authorize writes.
     let snapshot = try hardware.snapshot()
@@ -106,6 +115,7 @@ public final class ControlSession {
     else {
       throw FanError.invalid(L10n.t("group.invalid"))
     }
+    hardware.beginControlOperation()
     let snapshot = try hardware.snapshot()
     // Validate the entire group before the first write. Each configure also rereads telemetry.
     for id in ids {
@@ -119,7 +129,7 @@ public final class ControlSession {
     do {
       for id in ids.sorted() {
         touched.insert(id)
-        try configure(id: id, rule: rule)
+        try configureWithinOperation(id: id, rule: rule)
       }
     } catch {
       // Physical writes are sequential, so failure returns the touched group to automatic.

@@ -40,7 +40,7 @@ enum BundledDocument: String, CaseIterable, Identifiable {
     switch self {
     case .license: name = "LICENSE"; ext = "txt"
     case .thirdParty: name = "THIRD_PARTY_NOTICES"; ext = "md"
-    case .privacy: name = "PRIVACY"; ext = "md"
+    case .privacy: name = L10n.language == "vi" ? "PRIVACY-vi" : "PRIVACY"; ext = "md"
     }
     guard let url = Bundle.main.url(forResource: name, withExtension: ext),
       let text = try? String(contentsOf: url, encoding: .utf8) else { return L10n.t("info.missingDocument") }

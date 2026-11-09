@@ -13,15 +13,11 @@ struct ScheduleEditor: View {
   @State private var time = Date()
   @State private var days: Set<Int> = [2, 3, 4, 5, 6]
   @State private var fanIDs = Set<Int>()
-  @State private var presetID: UUID?
+  @State private var presetID: String?
   @State private var error: String?
   @State private var enabled = true
-  private var availablePresets: [FanPreset] {
-    var presets = store.presets.filter { $0.mode != .automatic }
-    if let old = existing?.preset, !presets.contains(where: { $0.id == old.id }) {
-      presets.append(old)
-    }
-    return presets
+  private var availablePresets: [SchedulePresetChoice] {
+    SchedulePresetChoice.make(library: store.presets, saved: existing?.preset)
   }
   var body: some View {
     VStack(alignment: .leading, spacing: 18) {
@@ -55,7 +51,7 @@ struct ScheduleEditor: View {
           } else if timing == 1 {
             field(L10n.t("schedule.start")) {
               DatePicker(
-                L10n.t("schedule.start"), selection: $date, in: Date()...,
+                L10n.t("schedule.start"), selection: $date,
                 displayedComponents: [.date, .hourAndMinute]
               ).labelsHidden()
             }
@@ -81,7 +77,10 @@ struct ScheduleEditor: View {
           }
           field(L10n.t("schedule.preset")) {
             Picker(L10n.t("schedule.preset"), selection: $presetID) {
-              ForEach(availablePresets) { preset in Text(preset.name).tag(Optional(preset.id)) }
+              ForEach(availablePresets) { choice in
+                Text(choice.preset.name + (choice.isSnapshot ? " · " + L10n.t("schedule.savedSnapshot") : ""))
+                  .tag(Optional(choice.id))
+              }
             }.labelsHidden().frame(maxWidth: .infinity, alignment: .leading)
           }
           field(L10n.t("schedule.runDuration")) { minuteInput($minutes, range: 1...1440) }
@@ -141,7 +140,7 @@ struct ScheduleEditor: View {
   private func weekday(_ day: Int) -> String {
     var calendar = Calendar.current
     calendar.locale = Locale(identifier: L10n.language)
-    return calendar.veryShortWeekdaySymbols[day - 1]
+    return calendar.shortWeekdaySymbols[day - 1]
   }
   private func load() {
     fanIDs = Set(store.fans.map(\.id))
@@ -151,11 +150,11 @@ struct ScheduleEditor: View {
     name = item.name
     minutes = item.durationMinutes
     fanIDs = Set(item.fanIDs)
-    presetID = item.preset.id
+    presetID = availablePresets.first(where: { $0.isSnapshot })?.id ?? item.preset.id.uuidString
     switch item.timing {
     case .once(let when):
       timing = 1
-      date = max(when, Date().addingTimeInterval(60))
+      date = when
     case .weekly(let weekdays, let hour, let minute):
       timing = 2
       days = Set(weekdays)
@@ -164,7 +163,7 @@ struct ScheduleEditor: View {
     }
   }
   private func save() {
-    guard let preset = store.presets.first(where: { $0.id == presetID }) ?? existing?.preset else {
+    guard let preset = availablePresets.first(where: { $0.id == presetID })?.preset else {
       error = L10n.t("schedule.needPreset")
       return
     }

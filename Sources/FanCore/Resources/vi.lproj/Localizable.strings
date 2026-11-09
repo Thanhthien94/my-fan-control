@@ -300,3 +300,5 @@
 "info.buildDate" = "Ngày bản dựng";
 "quit.restoreFailed" = "Chưa thể xác nhận trả quạt về tự động";
 "quit.stayOpen" = "Giữ app mở";
+"operation.timeout" = "Hết thời gian xác nhận điều khiển. Đang yêu cầu trả quạt về tự động.";
+"schedule.savedSnapshot" = "Cấu hình đã lưu trong lịch";

@@ -8,28 +8,40 @@ final class FanKeyController {
   let write: (String, Double) throws -> Void
   let wait: (TimeInterval) -> Void
   let cancelled: () -> Bool
+  let now: () -> ContinuousClock.Instant
+  private var operationDeadline: ContinuousClock.Instant?
   private(set) var forced = Set<Int>()
   private var ownsGate = false
   init(
     read: @escaping (String) throws -> Double, write: @escaping (String, Double) throws -> Void,
     wait: @escaping (TimeInterval) -> Void = { Thread.sleep(forTimeInterval: $0) },
-    cancelled: @escaping () -> Bool = { false }
+    cancelled: @escaping () -> Bool = { false },
+    now: @escaping () -> ContinuousClock.Instant = { .now }
   ) {
     self.read = read
     self.write = write
     self.wait = wait
     self.cancelled = cancelled
+    self.now = now
+  }
+  func beginControlOperation() { operationDeadline = now().advanced(by: .seconds(25)) }
+  private func checkOperation() throws {
+    if cancelled() { throw FanError.invalid(L10n.t("Đã hủy cấp quyền.")) }
+    if let deadline = operationDeadline, now() >= deadline {
+      throw FanError.invalid(L10n.t("operation.timeout"))
+    }
   }
   func modeKey(_ id: Int) -> String? {
     if (try? read("F\(id)md")) != nil { return "F\(id)md" }
     if (try? read("F\(id)Md")) != nil { return "F\(id)Md" }
     return nil
   }
-  private func retry(_ key: String, _ value: Double, attempts: Int = 10, delay: TimeInterval = 0.05)
+  private func retry(_ key: String, _ value: Double, attempts: Int = 10, delay: TimeInterval = 0.05, respectBudget: Bool = false)
     throws
   {
     var last: Error = FanError.invalid("SMC write failed")
     for i in 0..<attempts {
+      if respectBudget { try checkOperation() }
       do {
         try write(key, value)
         return
@@ -44,6 +56,7 @@ final class FanKeyController {
     guard (0..<10).contains(fan.id), rpm.isFinite, rpm >= fan.minimum, rpm <= fan.maximum else {
       throw FanError.invalid(L10n.t("RPM nằm ngoài giới hạn phần cứng."))
     }
+    try checkOperation()
     let key = modeKey(fan.id)
     // Check the complete control path before acquiring a global gate or recording ownership.
     let mask = key == nil ? try validatedMask() : nil
@@ -54,12 +67,13 @@ final class FanKeyController {
         throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
       }
       if gate == 0 {
-        try retry("Ftst", 1, attempts: 100)
+        try retry("Ftst", 1, attempts: 100, respectBudget: true)
         ownsGate = true
         wait(3)
       } else {
         ownsGate = true
       }
+      try checkOperation()
       guard try read("Ftst") == 1 else {
         throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
       }
@@ -69,12 +83,12 @@ final class FanKeyController {
       return
     } else {
       let bits = mask ?? 0
-      try retry("FS! ", Double(bits | (1 << fan.id)))
+      try retry("FS! ", Double(bits | (1 << fan.id)), respectBudget: true)
       guard try validatedMask() & (1 << fan.id) != 0 else {
         throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
       }
     }
-    try retry("F\(fan.id)Tg", rpm)
+    try retry("F\(fan.id)Tg", rpm, respectBudget: true)
     guard abs(try read("F\(fan.id)Tg") - rpm) < 2 else {
       throw FanError.invalid(L10n.t("SMC không xác nhận RPM mục tiêu."))
     }
@@ -82,12 +96,14 @@ final class FanKeyController {
   private func forcePair(key: String, fanID: Int, rpm: Double, attempts: Int) throws {
     var last: Error = FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
     for i in 0..<attempts {
-      if cancelled() { throw FanError.invalid(L10n.t("Đã hủy cấp quyền.")) }
+      try checkOperation()
       do {
         // Some firmware drops forced mode while target is zero. Write the bounded target
         // immediately after mode, then verify the pair instead of checking in between.
         try write(key, 1)
+        try checkOperation()
         try write("F\(fanID)Tg", rpm)
+        try checkOperation()
         if try read(key) == 1, abs(try read("F\(fanID)Tg") - rpm) < 2 { return }
       } catch { last = error }
       if i + 1 < attempts { wait(0.1) }

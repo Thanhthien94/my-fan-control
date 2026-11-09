@@ -12,7 +12,9 @@ struct AppMetadata: Sendable {
     build = info["CFBundleVersion"] as? String ?? "—"
     let candidate = info["MFCSourceRevision"] as? String ?? ""
     revision = candidate.count == 40 && candidate.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) ? candidate : ""
-    buildDate = info["MFCBuildDate"] as? String ?? "—"
+    if let raw = info["MFCBuildDate"] as? String, let date = ISO8601DateFormatter().date(from: raw) {
+      buildDate = date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(Locale(identifier: L10n.language)))
+    } else { buildDate = "—" }
     copyright = info["NSHumanReadableCopyright"] as? String ?? "Copyright © 2026 Thanhthien94. MIT License."
   }
   var sourceURL: URL { URL(string: "https://github.com/Thanhthien94/my-fan-control/tree/" + (revision.isEmpty ? "main" : revision))! }

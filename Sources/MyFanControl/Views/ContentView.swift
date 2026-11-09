@@ -217,7 +217,7 @@ struct ContentView: View {
           .foregroundStyle(.blue.opacity(0.1))
         LineMark(x: .value(L10n.t("Thời gian"), point.date), y: .value(unit.symbol, unit.value(point.temperature)))
           .foregroundStyle(.blue).lineStyle(StrokeStyle(lineWidth: 1.5))
-      }.chartYScale(domain: unit.value(0)...unit.value(110)).chartXAxis(.hidden)
+      }.chartYScale(domain: unit.value(0)...unit.value(130)).chartXAxis(.hidden)
     }
   }
 }

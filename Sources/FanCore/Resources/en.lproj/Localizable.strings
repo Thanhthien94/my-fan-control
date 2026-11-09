@@ -300,3 +300,5 @@
 "info.buildDate" = "Build date";
 "quit.restoreFailed" = "Could not confirm automatic fan restoration";
 "quit.stayOpen" = "Keep app open";
+"operation.timeout" = "Control confirmation timed out. Automatic restoration is being requested.";
+"schedule.savedSnapshot" = "Saved schedule configuration";

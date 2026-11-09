@@ -25,7 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.messageText = L10n.t("quit.restoreFailed")
         alert.informativeText = store.error ?? L10n.t("schedule.restorePending")
         alert.addButton(withTitle: L10n.t("quit.stayOpen"))
-        if let window = sender.keyWindow { alert.beginSheetModal(for: window) }
+        if let window = sender.keyWindow { alert.beginSheetModal(for: window, completionHandler: { _ in }) }
         else { alert.runModal() }
         return
       }

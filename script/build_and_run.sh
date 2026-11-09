@@ -9,7 +9,7 @@ APP_NAME=MyFanControl
 APP_RELEASE="$(cat VERSION)"
 APP_SHORT_VERSION="${APP_RELEASE%%-*}"
 APP_BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
-APP_BUILD_DATE="$(git show -s --format=%cI HEAD 2>/dev/null || echo unknown)"
+APP_BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 APP_BUNDLE="$ROOT_DIR/dist/$APP_NAME.app"
 if [[ "$MODE" != --build-only ]] && /usr/bin/pgrep -x "$APP_NAME" >/dev/null; then
   # Ask our own app to restore automatic control before replacing its executable.
@@ -28,6 +28,7 @@ cp "$ROOT_DIR/assets/brand/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon
 cp "$ROOT_DIR/LICENSE" "$APP_BUNDLE/Contents/Resources/LICENSE.txt"
 cp "$ROOT_DIR/THIRD_PARTY_NOTICES.md" "$APP_BUNDLE/Contents/Resources/THIRD_PARTY_NOTICES.md"
 cp "$ROOT_DIR/PRIVACY.md" "$APP_BUNDLE/Contents/Resources/PRIVACY.md"
+cp "$ROOT_DIR/PRIVACY-vi.md" "$APP_BUNDLE/Contents/Resources/PRIVACY-vi.md"
 cp "$BIN_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp "$BIN_DIR/fanctl" "$APP_BUNDLE/Contents/MacOS/fanctl"
 for RESOURCE in "$BIN_DIR/"*.bundle; do
