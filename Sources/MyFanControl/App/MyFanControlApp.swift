@@ -5,12 +5,17 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
   var store: FanStore?
   func applicationDidFinishLaunching(_ notification: Notification) {
+    let args = CommandLine.arguments
+    if let i = args.firstIndex(of: "--ui-appearance"), args.indices.contains(i + 1) {
+      if args[i + 1] == "dark" { NSApp.appearance = NSAppearance(named: .darkAqua) }
+      if args[i + 1] == "light" { NSApp.appearance = NSAppearance(named: .aqua) }
+    }
     NSApp.setActivationPolicy(.regular)
     NSApp.applicationIconImage = AppIdentity.icon
     NSApp.activate(ignoringOtherApps: true)
   }
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    guard let store, store.helperEnabled else { return .terminateNow }
+    guard let store else { return .terminateNow }
     Task { @MainActor in
       await store.shutdown()
       sender.reply(toApplicationShouldTerminate: true)
@@ -20,6 +25,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main struct MyFanControlApp: App {
+  init() {
+    let args = CommandLine.arguments
+    if let i = args.firstIndex(of: "--ui-language"), args.indices.contains(i + 1),
+      ["vi", "en"].contains(args[i + 1])
+    {
+      L10n.languageOverride = args[i + 1]
+    }
+  }
   @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
   @State private var store = FanStore()
   @AppStorage("language") private var language = "system"
@@ -28,13 +41,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       ContentView(store: store)
         .id(language)
         .environment(\.locale, Locale(identifier: L10n.language))
-        .frame(minWidth: 1000, minHeight: 700)
+        .frame(minWidth: 1000, minHeight: 760)
         .task {
           delegate.store = store
           store.start()
         }
     }
-    .defaultSize(width: 1080, height: 740)
+    .defaultSize(width: 1080, height: 820)
     .commands {
       CommandGroup(replacing: .appInfo) {
         Button(L10n.t("legal.about")) {

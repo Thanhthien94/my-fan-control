@@ -1,6 +1,6 @@
 # Third-party notices
 
-Sensor mapping facts in `Sources/FanCore/SensorCatalog.swift` are adapted from the Stats project by Serhiy Mytrovtsiy, revision `1a4a9a6079196cf1ba87124eca2b6ba4e674024a`:
+Sensor mapping facts and Apple Silicon fan-control handoff compatibility behavior in `Sources/FanCore/SensorCatalog.swift` and `Sources/FanCore/FanKeyController.swift` are adapted from the Stats project by Serhiy Mytrovtsiy, revision `1a4a9a6079196cf1ba87124eca2b6ba4e674024a`:
 https://github.com/exelban/stats/blob/1a4a9a6079196cf1ba87124eca2b6ba4e674024a/Modules/Sensors/values.swift
 
 MIT License

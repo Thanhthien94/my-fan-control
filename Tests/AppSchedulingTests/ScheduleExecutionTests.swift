@@ -9,6 +9,17 @@ actor HardwareFake: HardwareBackend {
   var commands = [String]()
   var failFan: Int?
   var failedRestores = 0
+  var online = true
+  var cancelAuthorization = false
+  var authorizationCount = 0
+  var bootstrapFailure: String?
+  var responseProtocol = HelperResponse.currentProtocolVersion
+  func useOldProtocol() { responseProtocol = 2 }
+  func requireAuthorization(cancel: Bool = false, failure: String? = nil) {
+    online = false
+    cancelAuthorization = cancel
+    bootstrapFailure = failure
+  }
   func failOneRestore() { failedRestores = 1 }
   func fail(on id: Int) { failFan = id }
   func read() -> Snapshot {
@@ -21,6 +32,7 @@ actor HardwareFake: HardwareBackend {
       sensors: [Sensor(id: "test", name: "Sensor", celsius: 50)])
   }
   func send(_ request: HelperRequest) throws -> HelperResponse {
+    guard online else { throw FanError.helper("Authorization required") }
     commands.append(request.command)
     if request.command == "configureGroup", let ids = request.fanIDs, let rule = request.preset {
       do {
@@ -46,9 +58,18 @@ actor HardwareFake: HardwareBackend {
       if rule.mode == .automatic { policies.removeValue(forKey: id) } else { policies[id] = rule }
     }
     if request.command == "automatic" || request.command == "shutdown" { policies = [:] }
-    return HelperResponse(ok: true, controlled: policies.keys.sorted())
+    var response = HelperResponse(ok: true, controlled: policies.keys.sorted())
+    response.protocolVersion = responseProtocol
+    return response
   }
-  func authorize() {}
+  func authorize() throws {
+    authorizationCount += 1
+    if cancelAuthorization { throw FanError.helper("Authorization canceled") }
+    online = bootstrapFailure == nil
+    responseProtocol = HelperResponse.currentProtocolVersion
+  }
+  func authorizationFailure() -> String? { bootstrapFailure }
+  func authorizations() -> Int { authorizationCount }
   func ids() -> Set<Int> { Set(policies.keys) }
   func configurationCount() -> Int { commands.filter { $0 == "configure" }.count }
   func groupConfigurationCount() -> Int { commands.filter { $0 == "configureGroup" }.count }

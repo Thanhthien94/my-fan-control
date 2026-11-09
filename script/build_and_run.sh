@@ -6,6 +6,8 @@ source "$ROOT_DIR/script/toolchain.sh"
 MODE="${1:-run}"
 case "$MODE" in run|--verify|--build-only|--debug|--logs|--telemetry) ;; *) echo "Usage: $0 [run|--verify|--build-only|--debug|--logs|--telemetry]" >&2; exit 2;; esac
 APP_NAME=MyFanControl
+APP_RELEASE="$(cat VERSION)"
+APP_SHORT_VERSION="${APP_RELEASE%%-*}"
 APP_BUNDLE="$ROOT_DIR/dist/$APP_NAME.app"
 if [[ "$MODE" != --build-only ]] && /usr/bin/pgrep -x "$APP_NAME" >/dev/null; then
   # Ask our own app to restore automatic control before replacing its executable.
@@ -30,7 +32,7 @@ for RESOURCE in "$BIN_DIR/"*.bundle; do
   [[ -d "$RESOURCE" ]] || continue
   /usr/bin/ditto "$RESOURCE" "$APP_BUNDLE/Contents/Resources/$(basename "$RESOURCE")"
 done
-cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
+cat > "$APP_BUNDLE/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -41,7 +43,7 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundleDevelopmentRegion</key><string>en</string>
 <key>CFBundleLocalizations</key><array><string>en</string><string>vi</string></array>
-<key>CFBundleShortVersionString</key><string>0.1.0</string>
+<key>CFBundleShortVersionString</key><string>$APP_SHORT_VERSION</string>
 <key>CFBundleVersion</key><string>1</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>

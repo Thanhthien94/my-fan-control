@@ -61,8 +61,10 @@ int mfc_read(uint32_t connection, const char *key, MFCValue *value) {
 int mfc_write(uint32_t connection, const char *key, const MFCValue *value) {
     if (geteuid()!=0 || !key || strlen(key)!=4 || value->size>32 || !value->size) return -1;
     // The only writable namespace is fan target/mode and legacy force mask.
-    if (!(key[0]=='F' && key[1]>='0' && key[1]<='9' &&
-          ((key[2]=='T' && key[3]=='g') || (key[2]=='M' && key[3]=='d'))) && strcmp(key,"FS! ")) return -1;
+    if (!strcmp(key,"Ftst")) {
+        if(value->size!=1 || value->bytes[0]>1) return -1;
+    } else if (!(key[0]=='F' && key[1]>='0' && key[1]<='9' &&
+          ((key[2]=='T' && key[3]=='g') || ((key[2]=='M'||key[2]=='m') && key[3]=='d'))) && strcmp(key,"FS! ")) return -1;
     Packet in = {0}, out = {0}; in.key=fourcc(key); in.command=6; in.info.size=value->size;
     memcpy(in.bytes,value->bytes,value->size); return call(connection,&in,&out);
 }
@@ -84,6 +86,13 @@ static void options(int fd) {
 int mfc_listen(const char *path, uint32_t uid) {
     if(geteuid()!=0 || uid==0) return -1;
     struct sockaddr_un addr; if(address(path,&addr)) return -1;
+    struct stat oldstat,newstat;
+    if(lstat(path,&oldstat)==0 && S_ISSOCK(oldstat.st_mode) && oldstat.st_uid==uid) {
+        int probe=socket(AF_UNIX,SOCK_STREAM,0);
+        int connected=probe<0 ? -1 : connect(probe,(struct sockaddr *)&addr,sizeof(addr));
+        int failure=errno;if(probe>=0)close(probe);
+        if(connected<0 && failure==ECONNREFUSED && lstat(path,&newstat)==0 && oldstat.st_ino==newstat.st_ino) unlink(path);
+    }
     int fd=socket(AF_UNIX,SOCK_STREAM,0); if(fd<0) return -1;
     // Never remove or follow a preexisting path; /var/run is root-owned.
     mode_t old=umask(077);
@@ -113,16 +122,24 @@ int mfc_wait(int fd, int seconds) {
     fd_set set; FD_ZERO(&set); FD_SET(fd,&set); struct timeval t={seconds,0};
     return select(fd+1,&set,NULL,NULL,&t);
 }
-int mfc_receive(int fd, char *buffer, size_t capacity) {
+static int receive_deadline(int fd, char *buffer, size_t capacity,double timeout) {
+    if(fd<0 || fd>=FD_SETSIZE) return -1;
     size_t n=0;struct timespec start,now;clock_gettime(CLOCK_MONOTONIC,&start);
     while(n+1<capacity) {
         clock_gettime(CLOCK_MONOTONIC,&now);
         double elapsed=(double)(now.tv_sec-start.tv_sec)+(double)(now.tv_nsec-start.tv_nsec)/1e9;
-        if(elapsed>=1.0) return -1;
+        if(elapsed>=timeout) return -1;
+        double remaining=timeout-elapsed;
+        fd_set ready;FD_ZERO(&ready);FD_SET(fd,&ready);
+        struct timeval tv={(int)remaining,(int)((remaining-(int)remaining)*1e6)};
+        if(select(fd+1,&ready,NULL,NULL,&tv)<=0) return -1;
         char c; ssize_t count=recv(fd,&c,1,0); if(count!=1) return -1;
         if(c=='\n') {buffer[n]=0;return (int)n;} buffer[n++]=c; }
     return -1;
 }
+int mfc_receive(int fd,char *buffer,size_t capacity){return receive_deadline(fd,buffer,capacity,1);}
+int mfc_receive_reply(int fd,char *buffer,size_t capacity){return receive_deadline(fd,buffer,capacity,45);}
+int mfc_peer_pid(int fd) {pid_t pid=0;socklen_t size=sizeof(pid);return getsockopt(fd,SOL_LOCAL,LOCAL_PEERPID,&pid,&size)==0 ? pid : -1;}
 int mfc_send(int fd, const char *buffer, size_t length) {
     size_t n=0; while(n<length) {ssize_t result=send(fd,buffer+n,length-n,0);
         if(result<=0) return -1; n+=(size_t)result;} return 0;
