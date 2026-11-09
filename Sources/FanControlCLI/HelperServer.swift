@@ -57,13 +57,15 @@ final class HelperServer {
         lastContact = .now
       } catch {
         response = HelperResponse(
-          ok: false, message: error.localizedDescription, controlled: session.owned.sorted())
+          ok: false, message: error.localizedDescription, controlled: session.activeIDs.sorted(),
+          restoring: session.restoringIDs.sorted())
       }
       if var data = try? JSONEncoder().encode(response) {
         data.append(10)
-        _ = data.withUnsafeBytes {
+        let sent = data.withUnsafeBytes {
           mfc_send(client, $0.baseAddress!.assumingMemoryBound(to: CChar.self), data.count)
         }
+        if sent != 0 { session.restoreAll() }
       }
       close(client)
     }
@@ -85,13 +87,17 @@ final class HelperServer {
       guard session.restoreAll() else {
         throw FanError.helper(session.notice ?? L10n.t("Không khôi phục được quạt."))
       }
+      session.acknowledgeNotice()
     case "shutdown":
       guard session.restoreAll() else {
         throw FanError.helper(session.notice ?? L10n.t("Không khôi phục được quạt."))
       }
       running = false
+      session.acknowledgeNotice()
     default: throw FanError.invalid(L10n.t("Lệnh không được hỗ trợ."))
     }
-    return HelperResponse(ok: true, message: session.notice, controlled: session.owned.sorted())
+    return HelperResponse(
+      ok: true, message: session.notice, controlled: session.activeIDs.sorted(),
+      restoring: session.restoringIDs.sorted())
   }
 }

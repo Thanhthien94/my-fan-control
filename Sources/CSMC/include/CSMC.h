@@ -12,6 +12,8 @@ int mfc_accept(int server, uint32_t allowed_uid);
 int mfc_connect(const char *path);
 int mfc_wait(int fd, int seconds);
 int mfc_receive(int fd, char *buffer, size_t capacity);
+int mfc_receive_reply(int fd, char *buffer, size_t capacity);
+int mfc_peer_pid(int fd);
 int mfc_send(int fd, const char *buffer, size_t length);
 void mfc_install_signal_handlers(void);
 int mfc_stop_requested(void);

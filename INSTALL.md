@@ -1,11 +1,11 @@
 # Install the macOS preview
 
-**Apple Silicon (M1 or later), macOS 14 or later.** This preview is ad-hoc signed and is not Apple-notarized. Hardware control still needs real-device validation. Monitoring starts without administrator access or changes to fan speed.
+**Apple Silicon (M1 or later), macOS 14 or later.** This preview is ad-hoc signed and is not Apple-notarized. Saved-preset control and return to automatic were measured on an M4 Pro; other models and sleep/wake recovery remain unverified. Monitoring starts without administrator access or changes to fan speed.
 
 1. Download the `MyFanControl-<version>-arm64.dmg` file from the official [GitHub Releases](https://github.com/Thanhthien94/my-fan-control/releases).
 2. Open the DMG and drag **MyFanControl.app** to the **Applications** shortcut.
 3. Open My Fan Control from Applications. If macOS blocks it because the developer cannot be verified, open **System Settings → Privacy & Security**, find the message for this app and choose **Open Anyway**, then confirm **Open**. macOS may ask for authentication. Only do this for the app you downloaded from the official repository and whose checksum you verified.
-4. Verify that fan RPM and temperature readings update. Fan controls remain inactive until you deliberately click **Enable controls…** and complete the separate administrator prompt.
+4. Verify that fan RPM and temperature readings update. Fan controls remain inactive until you deliberately click **Apply** or **Enable controls…** and complete the separate administrator prompt.
 
 Apple describes the blocked-app flow here: [Safely open apps on your Mac](https://support.apple.com/en-us/102445). On some versions the block appears only after the first open attempt. If macOS reports malware, damage or a failed signature check, stop and report the exact message instead of treating it as the ordinary unidentified-developer case.
 
@@ -16,7 +16,7 @@ The Open Anyway step is a per-app exception; no system-wide security setting nee
 Download `SHA256SUMS.txt` from the same release and compare the DMG checksum:
 
 ```sh
-shasum -a 256 ~/Downloads/MyFanControl-0.1.0-preview.1-arm64.dmg
+shasum -a 256 ~/Downloads/MyFanControl-0.2.0-arm64.dmg
 ```
 
 The value must match the corresponding line in `SHA256SUMS.txt`. Checksums detect a mismatched/corrupted file; they do not replace Apple Developer ID verification. A ZIP with the same app is provided as an alternative to DMG installation.
