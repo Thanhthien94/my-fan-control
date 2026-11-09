@@ -7,6 +7,7 @@ struct ContentView: View {
   @State private var search = ""
   @State private var selectedSensor: String?
   @State private var showUnknown = false
+  @State private var showSchedules = false
   @AppStorage("fahrenheit") private var fahrenheit = false
   private var visibleSensors: [Sensor] {
     store.sensors.filter { sensor in
@@ -99,6 +100,11 @@ struct ContentView: View {
     .toolbar {
       ToolbarItemGroup {
         Button {
+          showSchedules = true
+        } label: {
+          Label(L10n.t("schedule.title"), systemImage: "calendar.badge.clock")
+        }
+        Button {
           Task { await store.restoreAll() }
         } label: {
           Label(L10n.t("Tất cả tự động"), systemImage: "arrow.uturn.backward")
@@ -120,6 +126,7 @@ struct ContentView: View {
         }
       }
     }
+    .sheet(isPresented: $showSchedules) { ScheduleDashboard(store: store) }
   }
   private var overview: some View {
     HStack(alignment: .center, spacing: 24) {

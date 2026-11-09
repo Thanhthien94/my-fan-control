@@ -14,5 +14,6 @@ let package = Package(
     .executableTarget(name: "MyFanControl", dependencies: ["FanCore"]),
     .executableTarget(name: "FanControlCLI", dependencies: ["FanCore", "CSMC"]),
     .testTarget(name: "FanCoreTests", dependencies: ["FanCore"]),
+    .testTarget(name: "AppSchedulingTests", dependencies: ["MyFanControl", "FanCore"]),
   ], swiftLanguageModes: [.v5]
 )

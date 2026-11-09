@@ -9,6 +9,7 @@ struct TemperaturePoint: Identifiable {
 }
 
 @MainActor @Observable final class FanStore {
+  let schedules: ScheduleStore
   var snapshot: Snapshot?
   var error: String?
   var helperEnabled = false
@@ -20,7 +21,8 @@ struct TemperaturePoint: Identifiable {
   var selectedFan = 0
   var lastRead: Date?
   var helperMessage: String?
-  private let hardware = HardwareService()
+  private let hardware: any HardwareBackend
+  private let defaults: UserDefaults
   private var loop: Task<Void, Never>?
   private var sleepObserver: NSObjectProtocol?
   var hottest: Sensor? { snapshot?.sensors.max(by: { $0.celsius < $1.celsius }) }
@@ -32,18 +34,26 @@ struct TemperaturePoint: Identifiable {
         || $0.localizedName == "Macs Fan Control"
     }
   }
-  init() {
-    if let data = UserDefaults.standard.data(forKey: "presets"),
+  init(
+    hardware: any HardwareBackend = HardwareService(), defaults: UserDefaults = .standard,
+    schedules: ScheduleStore? = nil, observeSleep: Bool = true
+  ) {
+    self.hardware = hardware
+    self.defaults = defaults
+    self.schedules = schedules ?? ScheduleStore(defaults: defaults)
+    if let data = defaults.data(forKey: "presets"),
       let saved = try? JSONDecoder().decode([FanPreset].self, from: data)
     {
       presets = saved
     } else {
       presets = []
     }
-    sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
-      forName: NSWorkspace.willSleepNotification, object: nil, queue: .main
-    ) { [weak self] _ in
-      Task { @MainActor in await self?.restoreAll() }
+    if observeSleep {
+      sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+        forName: NSWorkspace.willSleepNotification, object: nil, queue: .main
+      ) { [weak self] _ in
+        Task { @MainActor in await self?.restoreAll() }
+      }
     }
   }
   func start() {
@@ -85,6 +95,7 @@ struct TemperaturePoint: Identifiable {
         self.error = error.localizedDescription
       }
     }
+    await schedules.tick(store: self)
   }
   func enable() async {
     guard !busy else { return }
@@ -117,15 +128,17 @@ struct TemperaturePoint: Identifiable {
       error = nil
     } catch { self.error = error.localizedDescription }
   }
-  func apply(_ rule: FanPreset, to id: Int) async {
-    guard helperEnabled, !busy else { return }
+  @discardableResult func apply(_ rule: FanPreset, to id: Int, scheduled: Bool = false) async
+    -> Bool
+  {
+    guard helperEnabled, !busy else { return false }
     guard !conflictingApp else {
       error = L10n.t("Hãy thoát Macs Fan Control trước khi áp dụng.")
-      return
+      return false
     }
     guard let snapshot, Date().timeIntervalSince(snapshot.date) < 5 else {
       error = L10n.t("Dữ liệu phần cứng đã cũ. Hãy đợi cập nhật.")
-      return
+      return false
     }
     busy = true
     defer { busy = false }
@@ -135,8 +148,13 @@ struct TemperaturePoint: Identifiable {
       if controlled.contains(id) { active[id] = rule } else { active.removeValue(forKey: id) }
       helperMessage = result.message
       error = nil
-    } catch { self.error = error.localizedDescription }
+      if !scheduled { schedules.manualOverride(fanID: id) }
+    } catch {
+      self.error = error.localizedDescription
+      return false
+    }
     await refresh()
+    return rule.mode == .automatic ? !controlled.contains(id) : active[id]?.id == rule.id
   }
   func restoreAll() async {
     guard helperEnabled else { return }
@@ -145,6 +163,7 @@ struct TemperaturePoint: Identifiable {
       active = [:]
       controlled = []
       helperMessage = nil
+      schedules.didRestoreAll()
     } catch { self.error = error.localizedDescription }
   }
   func shutdown() async {
@@ -154,6 +173,7 @@ struct TemperaturePoint: Identifiable {
         helperEnabled = false
         active = [:]
         controlled = []
+        schedules.didRestoreAll()
       } catch { self.error = error.localizedDescription }
     }
   }
@@ -167,7 +187,7 @@ struct TemperaturePoint: Identifiable {
   }
   private func persist() {
     if let data = try? JSONEncoder().encode(presets) {
-      UserDefaults.standard.set(data, forKey: "presets")
+      defaults.set(data, forKey: "presets")
     }
   }
 }

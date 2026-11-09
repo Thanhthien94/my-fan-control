@@ -15,6 +15,7 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 - Save and reuse named fan presets locally.
 - A menu bar temperature/RPM summary, temperature history and °C/°F display.
 - Native Vietnamese/English localization with a saved language preference.
+- Delayed countdowns, one-off date schedules, and weekly schedules per fan/preset, with bounded durations, conflict checks, cancellation, activity history and automatic-mode restoration.
 - An on-demand privileged helper with a ten-second client lease and automatic-mode restoration attempts on expired leases, telemetry loss, high temperatures, write errors and normal termination.
 
 ## Requirements and build
@@ -45,6 +46,12 @@ The test suite uses fake hardware; it never writes to real fans. The snapshot CL
 5. **Tất cả tự động** returns this session's controlled fans to automatic. **Tắt điều khiển** stops the helper after restoration. Closing the main window keeps the menu bar app running; quitting requests restoration and ends the session.
 
 Presets are saved locally and are not automatically applied on startup. Curve thresholds are always expressed in Celsius, including when sensor display uses Fahrenheit. The history chart and menu bar temperature also use Celsius.
+
+## Schedules and timers
+
+Save a fixed-RPM or sensor preset first, then open **Schedules & timers** from the toolbar. Choose a delayed countdown (0 minutes starts immediately), a specific future date, or selected weekdays and a local start time. Select the fans and a duration from 1 minute to 24 hours. See [scheduling behavior](docs/scheduling.md) for exact ownership and missed-job rules.
+
+Schedules run only while the app is open, the Mac is awake and controls are already authorized. They never wake the Mac or silently elevate privileges. Starts delayed by more than 60 seconds are skipped. Saved schedules are retained, but expired one-off jobs are not replayed on restart. Overlapping enabled schedules for the same fan are rejected; runtime checks also skip fans already controlled manually.
 
 This preview is ad-hoc signed, **not Developer ID signed or notarized**. A downloaded bundle may be blocked by Gatekeeper. Building from source is the recommended preview installation. Do not disable system security to run it.
 
