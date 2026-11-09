@@ -20,6 +20,7 @@ actor HardwareFake: HardwareBackend {
     cancelAuthorization = cancel
     bootstrapFailure = failure
   }
+  func handBackAll() { policies = [:] }
   func failOneRestore() { failedRestores = 1 }
   func fail(on id: Int) { failFan = id }
   func read() -> Snapshot {

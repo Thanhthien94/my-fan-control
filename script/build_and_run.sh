@@ -21,6 +21,10 @@ if [[ "$MODE" != --build-only ]] && /usr/bin/pgrep -x "$APP_NAME" >/dev/null; th
   if /usr/bin/pgrep -x "$APP_NAME" >/dev/null; then echo "App is still restoring controls. Close it before rebuilding." >&2; exit 1; fi
 fi
 CONFIGURATION="${MFC_CONFIGURATION:-debug}"
+if [[ -n "${MFC_BUILD_ARCH:-}" ]]; then
+  case "$MFC_BUILD_ARCH" in arm64|x86_64) ;; *) echo "Unsupported MFC_BUILD_ARCH" >&2; exit 2;; esac
+  MFC_SWIFT_ARGS+=(--arch "$MFC_BUILD_ARCH")
+fi
 swift build --configuration "$CONFIGURATION" ${MFC_SWIFT_ARGS[@]+"${MFC_SWIFT_ARGS[@]}"}
 BIN_DIR="$(swift build --configuration "$CONFIGURATION" ${MFC_SWIFT_ARGS[@]+"${MFC_SWIFT_ARGS[@]}"} --show-bin-path)"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"

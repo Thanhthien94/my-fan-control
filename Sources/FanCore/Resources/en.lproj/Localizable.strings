@@ -206,7 +206,7 @@
 "preset.target" = "Apply to";
 "preset.allFans" = "All fans";
 "preset.systemAuto" = "System automatic";
-"preset.unsaved" = "Unsaved changes · the running fan policy has not changed.";
+"preset.unsaved" = "The edited configuration has not been saved or applied.";
 "preset.update" = "Update preset";
 "preset.copy" = "Save a copy";
 "preset.copyName" = "%@ copy";
@@ -302,3 +302,15 @@
 "quit.stayOpen" = "Keep app open";
 "operation.timeout" = "Control confirmation timed out. Automatic restoration is being requested.";
 "schedule.savedSnapshot" = "Saved schedule configuration";
+"preset.autoPending" = "Click Apply to return the selected fans to macOS automatic control.";
+"Mỗi 1 giây" = "Every second";
+"mode.draft" = "Configuration to apply";
+"mode.pending" = "This configuration has not been applied.";
+"mode.authorizing" = "Waiting for macOS authorization…";
+"mode.applying" = "Applying…";
+"mode.applied" = "Applied";
+"mode.returnAllAuto" = "Return fans to automatic";
+"mode.returnFanAuto" = "Return %@ to automatic";
+"mode.fixedApplied" = "Set %@ to %d fixed RPM · “%@”.";
+"mode.sensorApplied" = "Applied sensor %@ to %@ · “%@”.";
+"mode.review" = "Review configuration";

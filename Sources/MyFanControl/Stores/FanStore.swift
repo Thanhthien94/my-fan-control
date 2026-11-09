@@ -16,6 +16,10 @@ struct TemperaturePoint: Identifiable {
   var operationMessage: String?
   var helperEnabled = false
   var busy = false
+  var authorizing = false
+  private let feedbackNow: () -> ContinuousClock.Instant
+  private var feedbackExpiry: ContinuousClock.Instant?
+  private var feedbackExpected: [Int: FanPreset]?
   var active = [Int: FanPreset]()
   var controlled = Set<Int>()
   var restoring = Set<Int>()
@@ -58,8 +62,10 @@ struct TemperaturePoint: Identifiable {
   }
   init(
     hardware: any HardwareBackend = HardwareService(), defaults: UserDefaults = .standard,
-    schedules: ScheduleStore? = nil, observeSleep: Bool = true
+    schedules: ScheduleStore? = nil, observeSleep: Bool = true,
+    feedbackNow: @escaping () -> ContinuousClock.Instant = { .now }
   ) {
+    self.feedbackNow = feedbackNow
     self.hardware = hardware
     self.defaults = defaults
     self.schedules = schedules ?? ScheduleStore(defaults: defaults)
@@ -88,10 +94,13 @@ struct TemperaturePoint: Identifiable {
   func start() {
     guard loop == nil else { return }
     loop = Task { [weak self] in
+      let clock = ContinuousClock()
       while !Task.isCancelled {
         guard let self else { break }
+        // Include read time in the one-second cadence; slow reads never queue catch-up polls.
+        let nextRefresh = clock.now.advanced(by: .seconds(1))
         await self.refresh()
-        try? await Task.sleep(for: .seconds(2))
+        try? await clock.sleep(until: nextRefresh)
       }
     }
   }
@@ -104,7 +113,7 @@ struct TemperaturePoint: Identifiable {
       if let hottest {
         history.append(TemperaturePoint(date: reading.date, temperature: hottest.celsius))
       }
-      if history.count > 1800 { history.removeFirst(history.count - 1800) }
+      history = TemperatureHistory.retaining(history, asOf: reading.date)
       if !fans.contains(where: { $0.id == selectedFan }) { selectedFan = fans.first?.id ?? 0 }
     } catch {
       self.telemetryError = error.localizedDescription
@@ -117,9 +126,6 @@ struct TemperaturePoint: Identifiable {
         controlled = Set(response.controlled)
         restoring = Set(response.restoring ?? [])
         helperMessage = response.message
-        if !Set(active.keys).isSubset(of: controlled), response.message != nil {
-          operationMessage = nil
-        }
         active = active.filter { controlled.contains($0.key) }
       } catch {
         helperEnabled = false
@@ -128,6 +134,7 @@ struct TemperaturePoint: Identifiable {
         self.error = error.localizedDescription
       }
     }
+    reconcileOperationFeedback()
     await schedules.tick(store: self)
   }
   func enable() async {
@@ -137,7 +144,8 @@ struct TemperaturePoint: Identifiable {
       return
     }
     busy = true
-    defer { busy = false }
+    authorizing = true
+    defer { busy = false; authorizing = false }
     do {
       // Reuse an already-running root helper before asking macOS for authorization.
       if (try? await hardware.send(HelperRequest("status")))?.protocolVersion
@@ -195,6 +203,8 @@ struct TemperaturePoint: Identifiable {
   }
   func restoreAll() async {
     guard helperEnabled else { return }
+    let ids = controlled.union(active.keys)
+    operationMessage = nil
     do {
       _ = try await hardware.send(HelperRequest("automatic"))
       active = [:]
@@ -202,7 +212,8 @@ struct TemperaturePoint: Identifiable {
       helperMessage = nil
       restoring = []
       error = nil
-      operationMessage = L10n.t("preset.alreadyAuto")
+      let automatic = FanPreset(name: L10n.t("Tự động"), mode: .automatic)
+      showOperation(L10n.t("preset.alreadyAuto"), expecting: Dictionary(uniqueKeysWithValues: ids.map { ($0, automatic) }))
       schedules.didRestoreAll()
     } catch { self.error = error.localizedDescription }
   }
@@ -299,7 +310,7 @@ struct TemperaturePoint: Identifiable {
       defaults.set(data, forKey: "presets")
       presets = updated
       error = nil
-      operationMessage = L10n.f("preset.saved", saved.name)
+      showOperation(L10n.f("preset.saved", saved.name))
       return saved
     } catch {
       self.error = error.localizedDescription
@@ -328,7 +339,7 @@ struct TemperaturePoint: Identifiable {
       if rule.mode == .automatic, !helperEnabled,
         reading.fans.filter({ fanIDs.contains($0.id) }).allSatisfy({ !$0.manual })
       {
-        operationMessage = L10n.t("preset.alreadyAuto")
+        showControlSuccess(rule, fanIDs: fanIDs)
         return true
       }
     } catch {
@@ -346,11 +357,42 @@ struct TemperaturePoint: Identifiable {
       success = await applyToAll(rule)
     }
     if success {
-      operationMessage = L10n.f("preset.applied", rule.name)
+      showControlSuccess(rule, fanIDs: fanIDs)
     } else if error == nil {
       error = helperMessage ?? L10n.t("preset.notActive")
     }
     return success
+  }
+  private func showOperation(_ message: String, expecting: [Int: FanPreset]? = nil) {
+    operationMessage = message
+    feedbackExpected = expecting
+    feedbackExpiry = feedbackNow().advanced(by: .seconds(6))
+  }
+  private func showControlSuccess(_ rule: FanPreset, fanIDs: [Int]) {
+    let scope = fanIDs.map { id in fans.first(where: { $0.id == id })?.name ?? L10n.f("fan.name", id + 1) }.joined(separator: ", ")
+    let message: String
+    switch rule.mode {
+    case .automatic: message = L10n.t("preset.alreadyAuto")
+    case .fixed: message = L10n.f("mode.fixedApplied", scope, Int(rule.rpm), rule.name)
+    case .sensor: message = L10n.f("mode.sensorApplied", rule.sensor, scope, rule.name)
+    }
+    showOperation(message, expecting: Dictionary(uniqueKeysWithValues: fanIDs.map { ($0, rule) }))
+  }
+  private func reconcileOperationFeedback() {
+    guard operationMessage != nil else { return }
+    let expired = feedbackExpiry.map { feedbackNow() >= $0 } ?? false
+    let changed = feedbackExpected.map { expected in
+      !expected.allSatisfy { id, rule in
+        guard let fan = fans.first(where: { $0.id == id }), !restoring.contains(id) else { return false }
+        if rule.mode == .automatic { return !fan.manual && !controlled.contains(id) }
+        return helperEnabled && fan.manual && controlled.contains(id) && active[id] == rule
+      }
+    } ?? false
+    if expired || changed {
+      operationMessage = nil
+      feedbackExpiry = nil
+      feedbackExpected = nil
+    }
   }
   func exportBackup() throws -> Data {
     try ConfigurationBackup(presets: presets, schedules: schedules.items).encoded()
@@ -386,7 +428,7 @@ struct TemperaturePoint: Identifiable {
     presets.removeAll { $0.id == id }
     persist()
     error = nil
-    operationMessage = L10n.f("preset.deleted", name)
+    showOperation(L10n.f("preset.deleted", name))
   }
   private func persist() {
     if let data = try? JSONEncoder().encode(presets) {

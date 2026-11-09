@@ -1,6 +1,6 @@
 # Apple Silicon compatibility
 
-This matrix describes preview `0.2.1-preview.1`. Capability handling and injected tests do not certify untested hardware.
+This matrix describes capability handling introduced in `0.2.1-preview.1` and retained in the `0.3.x` previews. Capability handling and injected tests do not certify untested hardware.
 
 | Mac family | Monitoring and fan topology | Control path | Evidence |
 | --- | --- | --- | --- |
@@ -12,7 +12,7 @@ This matrix describes preview `0.2.1-preview.1`. Capability handling and injecte
 | Macs with passive cooling | A readable FNum of zero displays a monitoring-only explanation | Controls remain disabled | Zero-fan injected test; missing FNum is separately marked unavailable |
 | Unknown future chips | Common known sensors and raw unidentified channels; no guessed generation mapping | Capabilities detected from readable keys; unsupported writes fail | Parser regression tests prevent M10 from being treated as M1 |
 
-Chip names are not an authorization to write. AppleSMC is undocumented and runtime capabilities can change with macOS/firmware. Pro/Max/Ultra suffixes do not imply a fan count, a fixed RPM range or universal physical left/right positions. The app labels fans by SMC index. A malformed count or invalid bounds disables all fan controls while preserving readable temperatures. Existing presets are retained; out-of-range presets must be edited for the current Mac.
+Chip names are not an authorization to write. AppleSMC is undocumented and runtime capabilities can change with macOS/firmware. Pro/Max/Ultra suffixes do not imply a fan count, a fixed RPM range or universal physical left/right positions. The app normally labels fans by SMC index. Mac16,7 retains its previous left/right display aliases; those aliases do not change SMC IDs or certify physical placement. A malformed count or invalid bounds disables all fan controls while preserving readable temperatures. Existing presets are retained; out-of-range presets must be edited for the current Mac.
 
 Control detects lowercase `F<id>md`, uppercase `F<id>Md`, and a validated legacy force mask. Ftst is optional. Missing mode/mask/target keys are detected before taking the global gate. Gate-less automatic-mode writes require bounded readback; failure retains cleanup ownership. The helper protocol is advanced to ensure an older running helper is not silently reused. Readability of a key does not prove it is writable. Delayed firmware responses or grouped operations can exceed the client reply deadline and trigger best-effort restoration; control compatibility remains provisional on untested machines.
 

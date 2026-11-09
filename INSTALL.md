@@ -16,7 +16,7 @@ The Open Anyway step is a per-app exception; no system-wide security setting nee
 Download `SHA256SUMS.txt` from the same release and compare the DMG checksum:
 
 ```sh
-shasum -a 256 ~/Downloads/MyFanControl-0.2.1-preview.1-arm64.dmg
+shasum -a 256 ~/Downloads/MyFanControl-0.3.1-preview.1-arm64.dmg
 ```
 
 The value must match the corresponding line in `SHA256SUMS.txt`. Checksums detect a mismatched/corrupted file; they do not replace Apple Developer ID verification. A ZIP with the same app is provided as an alternative to DMG installation.

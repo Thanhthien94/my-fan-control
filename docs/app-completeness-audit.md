@@ -19,7 +19,7 @@ Engineering assessment: 80/100, suitable for a clearly marked preview with cavea
 
 ## Validation
 
-77 Swift Testing tests passed, including backup merge/idempotency, malformed data, safe update destinations/channels, semantic preview ordering, metadata, schedule disable/snapshot identity and shared operation budgets. VI/EN has 304 matching keys and format placeholders. Native optimized build and C warning/error checks passed.
+82 Swift Testing tests passed, including backup merge/idempotency, malformed data, safe update destinations/channels, semantic preview ordering, metadata, schedule disable/snapshot identity and shared operation budgets. VI/EN has 304 matching keys and format placeholders. Native optimized build and C warning/error checks passed.
 
 Observed on M4 Pro: About in VI/dark and EN/light; version/build/revision/requirements; offline MIT/third-party/Vietnamese privacy sheets; successful live manual GitHub update check; native settings tabs; exported backup containing the existing 2000/2950 RPM presets; saved diagnostics with visible success. Save-panel automation briefly timed out once; the file was valid and the app main thread was idle, and a later native diagnostics save returned normally. No app hang was inferred from the automation timeout.
 
@@ -33,3 +33,5 @@ Observed on M4 Pro: About in VI/dark and EN/light; version/build/revision/requir
 New core-path line coverage: version comparison 93.3%, configuration backup 97.9%, release catalog 96.2%, display/CSV 85.7%, fan-key controller 84.3%. These are file-level figures, not full GUI coverage.
 
 No existing preset or enabled login-item preference was overwritten during testing. Live snapshots and preference backups stay in ignored local evidence; `.codex` remains excluded.
+
+Final preview fixes: automatic pending/applied status is separate from dirty manual presets; the duplicate automatic/status row was removed. Mac16,7 keeps its previous left/right display aliases without changing SMC control IDs. Regression coverage and native GUI inspection confirm these display fixes.

@@ -206,7 +206,7 @@
 "preset.target" = "Áp dụng cho";
 "preset.allFans" = "Tất cả quạt";
 "preset.systemAuto" = "Tự động macOS";
-"preset.unsaved" = "Có thay đổi chưa lưu · quạt vẫn chạy theo cấu hình cũ.";
+"preset.unsaved" = "Cấu hình đang chỉnh chưa được lưu hoặc áp dụng.";
 "preset.update" = "Cập nhật preset";
 "preset.copy" = "Lưu bản sao";
 "preset.copyName" = "Bản sao %@";
@@ -302,3 +302,15 @@
 "quit.stayOpen" = "Giữ app mở";
 "operation.timeout" = "Hết thời gian xác nhận điều khiển. Đang yêu cầu trả quạt về tự động.";
 "schedule.savedSnapshot" = "Cấu hình đã lưu trong lịch";
+"preset.autoPending" = "Bấm Áp dụng để trả các quạt đã chọn về tự động macOS.";
+"Mỗi 1 giây" = "Mỗi 1 giây";
+"mode.draft" = "Cấu hình muốn áp dụng";
+"mode.pending" = "Cấu hình này chưa được áp dụng.";
+"mode.authorizing" = "Đang chờ xác nhận macOS…";
+"mode.applying" = "Đang áp dụng…";
+"mode.applied" = "Đã áp dụng";
+"mode.returnAllAuto" = "Trả các quạt về tự động";
+"mode.returnFanAuto" = "Trả %@ về tự động";
+"mode.fixedApplied" = "Đã đặt %@: %d RPM cố định · “%@”.";
+"mode.sensorApplied" = "Đã áp dụng cảm biến %@ cho %@ · “%@”.";
+"mode.review" = "Kiểm tra lại cấu hình";

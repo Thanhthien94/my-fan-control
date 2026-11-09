@@ -9,3 +9,5 @@ docs/evidence/
 *.dmg
 assets/brand/*-source.png
 assets/brand/*.iconset/
+
+__pycache__/
