@@ -40,14 +40,6 @@ struct FanEditor: View {
       SavedPresetList(
         store: store, selectedID: draft.mode == .automatic ? nil : draft.id,
         fanIDs: targetFans.map(\.id), select: load, newPreset: newPreset)
-      HStack {
-        Button(L10n.t("preset.systemAuto")) {
-          draft = FanPreset(name: L10n.t("Tự động"), mode: .automatic)
-        }
-        Spacer()
-        Text(applied ? L10n.t("preset.inUse") : L10n.t("preset.notApplied"))
-          .font(.caption.weight(.medium)).foregroundStyle(applied ? .green : .secondary)
-      }
       Picker(L10n.t("preset.target"), selection: $applyAll) {
         Text(fan.name).tag(false)
         if store.fans.count > 1 { Text(L10n.t("preset.allFans")).tag(true) }
