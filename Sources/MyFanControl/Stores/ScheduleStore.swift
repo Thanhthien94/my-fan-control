@@ -9,6 +9,7 @@ struct ScheduledRun: Identifiable {
   var preset: FanPreset
   var endsAt: Date
   var deadline: ContinuousClock.Instant
+  var stopping = false
 }
 struct ScheduleEvent: Identifiable {
   var id = UUID()
@@ -62,6 +63,19 @@ struct ScheduleEvent: Identifiable {
     item.enabled = enabled
     do { try save(item) } catch { self.error = error.localizedDescription }
   }
+  func changeEnabled(_ id: UUID, _ enabled: Bool, store: FanStore) async {
+    guard !processing, !store.busy else {
+      error = L10n.t("operation.busy")
+      return
+    }
+    if !enabled { await cancel(id, store: store) }
+    setEnabled(id, enabled)
+    if !enabled, running[id] != nil { error = L10n.t("schedule.restorePending") }
+  }
+  func replaceFromBackup(_ values: [FanSchedule]) {
+    items = values
+    persist()
+  }
   private func persist() {
     if let data = try? JSONEncoder().encode(items) {
       defaults.set(data, forKey: "schedules")
@@ -91,6 +105,7 @@ struct ScheduleEvent: Identifiable {
     processing = true
     defer { processing = false }
     running[id]?.deadline = .now
+    running[id]?.stopping = true
     await finish(id, store: store, event: "schedule.event.canceled")
   }
   func delete(_ id: UUID, store: FanStore) async {
