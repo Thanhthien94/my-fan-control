@@ -2,6 +2,7 @@
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
+source "$ROOT_DIR/script/toolchain.sh"
 git rev-parse --is-inside-work-tree >/dev/null
 if [[ -n "$(git status --porcelain --untracked-files=normal)" ]]; then
   echo "Package releases from a clean committed tree." >&2; exit 1
