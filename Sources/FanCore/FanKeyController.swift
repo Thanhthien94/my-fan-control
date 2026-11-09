@@ -44,6 +44,10 @@ final class FanKeyController {
     guard (0..<10).contains(fan.id), rpm.isFinite, rpm >= fan.minimum, rpm <= fan.maximum else {
       throw FanError.invalid(L10n.t("RPM nằm ngoài giới hạn phần cứng."))
     }
+    let key = modeKey(fan.id)
+    // Check the complete control path before acquiring a global gate or recording ownership.
+    let mask = key == nil ? try validatedMask() : nil
+    _ = try read("F\(fan.id)Tg")
     forced.insert(fan.id)  // Keep cleanup ownership even if the handoff or first write fails.
     if let gate = try? read("Ftst") {
       guard gate == 0 || gate == 1 else {
@@ -60,12 +64,15 @@ final class FanKeyController {
         throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
       }
     }
-    if let key = modeKey(fan.id) {
+    if let key {
       try forcePair(key: key, fanID: fan.id, rpm: rpm, attempts: 300)
       return
     } else {
-      let bits = Int(try read("FS! "))
+      let bits = mask ?? 0
       try retry("FS! ", Double(bits | (1 << fan.id)))
+      guard try validatedMask() & (1 << fan.id) != 0 else {
+        throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
+      }
     }
     try retry("F\(fan.id)Tg", rpm)
     guard abs(try read("F\(fan.id)Tg") - rpm) < 2 else {
@@ -87,6 +94,21 @@ final class FanKeyController {
     }
     throw last
   }
+  private func validatedMask() throws -> Int {
+    let value = try read("FS! ")
+    guard value.isFinite, value >= 0, value <= 65535, value.rounded(.towardZero) == value else {
+      throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
+    }
+    return Int(value)
+  }
+  private func confirmAutomatic(_ key: String) throws {
+    for i in 0..<40 {
+      let mode = try read(key)
+      if mode == 0 || mode == 3 { return }
+      if i + 1 < 40 { wait(0.05) }
+    }
+    throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
+  }
   func restore(_ id: Int) throws {
     guard (0..<10).contains(id) else { throw FanError.invalid(L10n.t("Fan ID không hợp lệ.")) }
     if (try? read("Ftst")) == 0 {
@@ -102,9 +124,15 @@ final class FanKeyController {
     if let key = modeKey(id) {
       try retry(key, 0)
       try retry("F\(id)Tg", 0)
+      // Gate-less firmware can acknowledge a write before applying it.
+      // Never remove cleanup ownership until forced mode is actually gone.
+      try confirmAutomatic(key)
     } else {
-      let bits = Int(try read("FS! "))
+      let bits = try validatedMask()
       try retry("FS! ", Double(bits & ~(1 << id)))
+      guard try validatedMask() & (1 << id) == 0 else {
+        throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
+      }
     }
     forced.remove(id)
     do { if forced.isEmpty, ownsGate { _ = try returnSystemControl() } } catch {
@@ -137,7 +165,15 @@ final class FanKeyController {
       // Reset every owned mode and target before releasing the global gate. Leaving a
       // nonzero target behind can hold one fan at its last manual RPM after handback.
       for id in ids {
-        if let key = modeKey(id) { try retry(key, 0, attempts: 40) }
+        if let key = modeKey(id) {
+          try retry(key, 0, attempts: 40)
+        } else {
+          let bits = try validatedMask()
+          try retry("FS! ", Double(bits & ~(1 << id)))
+          guard try validatedMask() & (1 << id) == 0 else {
+            throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
+          }
+        }
         try retry("F\(id)Tg", 0, attempts: 40)
       }
       if gate != 0 { try retry("Ftst", 0, attempts: 40) }

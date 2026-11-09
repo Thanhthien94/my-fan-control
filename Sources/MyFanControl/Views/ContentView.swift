@@ -38,8 +38,10 @@ struct ContentView: View {
             .foregroundStyle(.secondary)
           if store.fans.isEmpty {
             ContentUnavailableView(
-              L10n.t("Chưa có dữ liệu quạt"), systemImage: "fan.slash",
-              description: Text(L10n.t("App chỉ hiển thị số đo thật từ AppleSMC.")))
+              L10n.t(store.snapshot?.fanAvailability == .noneReported
+                ? "compat.noFans" : "Chưa có dữ liệu quạt"), systemImage: "fan.slash",
+              description: Text(L10n.t(store.snapshot?.fanAvailability == .noneReported
+                ? "compat.noFansDetail" : "compat.unavailableFans")))
           } else {
             ScrollView(.horizontal, showsIndicators: false) {
               HStack(spacing: 8) {

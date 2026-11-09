@@ -31,14 +31,24 @@ public struct Sensor: Codable, Identifiable, Equatable, Sendable {
     self.celsius = celsius
   }
 }
+public enum FanAvailability: String, Codable, Sendable {
+  case available, noneReported, unavailable
+}
+
 public struct Snapshot: Codable, Sendable {
   public var fans: [Fan]
   public var sensors: [Sensor]
   public var date: Date
-  public init(fans: [Fan], sensors: [Sensor], date: Date = Date()) {
+  /// Optional for decoding snapshots from earlier helper versions.
+  public var fanAvailability: FanAvailability?
+  public init(
+    fans: [Fan], sensors: [Sensor], date: Date = Date(),
+    fanAvailability: FanAvailability? = nil
+  ) {
     self.fans = fans
     self.sensors = sensors
     self.date = date
+    self.fanAvailability = fanAvailability
   }
 }
 public enum FanError: LocalizedError {

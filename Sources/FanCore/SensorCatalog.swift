@@ -18,17 +18,15 @@ public struct SensorInfo: Sendable {
 }
 
 public enum HardwareIdentity {
-  public static let chip: String = {
+  private static func value(_ key: String) -> String {
     var size = 0
-    guard sysctlbyname("machdep.cpu.brand_string", nil, &size, nil, 0) == 0, size > 0 else {
-      return "Unknown"
-    }
+    guard sysctlbyname(key, nil, &size, nil, 0) == 0, size > 0 else { return "Unknown" }
     var bytes = [CChar](repeating: 0, count: size)
-    guard sysctlbyname("machdep.cpu.brand_string", &bytes, &size, nil, 0) == 0 else {
-      return "Unknown"
-    }
+    guard sysctlbyname(key, &bytes, &size, nil, 0) == 0 else { return "Unknown" }
     return String(cString: bytes)
-  }()
+  }
+  public static let chip = value("machdep.cpu.brand_string")
+  public static let model = value("hw.model")
 }
 
 /// Exact, case-sensitive, generation-scoped community mappings; never guess from a prefix.
@@ -43,7 +41,10 @@ public enum SensorCatalog {
       return info(L10n.f(label, i + 1), component)
     }
     let apple = chip.hasPrefix("Apple ")
-    let generation = (1...4).first { chip.hasPrefix("Apple M\($0)") }
+    let chipParts = chip.split(separator: " ")
+    let family = chipParts.count >= 2 && chipParts[0] == "Apple" ? String(chipParts[1]) : ""
+    let number = family.hasPrefix("M") ? Int(family.dropFirst()) : nil
+    let generation = number.flatMap { (1...5).contains($0) ? $0 : nil }
     if let generation {
       let efficiency: [String]
       let performance: [String]
@@ -64,16 +65,26 @@ public enum SensorCatalog {
           "Tf4E",
         ]
         gpu = ["Tf14", "Tf18", "Tf19", "Tf1A", "Tf24", "Tf28", "Tf29", "Tf2A"]
-      default:
+      case 4:
         efficiency = ["Te05", "Te0S", "Te09", "Te0H"]
         performance = ["Tp01", "Tp05", "Tp09", "Tp0D", "Tp0V", "Tp0Y", "Tp0b", "Tp0e"]
         gpu =
           (chip.contains("Pro") || chip.contains("Max") ? ["Tg1U", "Tg1k"] : ["Tg0G", "Tg0H"]) + [
             "Tg0K", "Tg0L", "Tg0d", "Tg0e", "Tg0j", "Tg0k",
           ]
+      default:  // M5: catalog labels are sensor groups, not verified physical core identities.
+        efficiency = []
+        performance = [
+          "Tp00", "Tp04", "Tp08", "Tp0C", "Tp0G", "Tp0K", "Tp0O", "Tp0R", "Tp0U", "Tp0X",
+          "Tp0a", "Tp0d", "Tp0g", "Tp0j", "Tp0m", "Tp0p", "Tp0u", "Tp0y",
+        ]
+        gpu = ["Tg0U", "Tg0X", "Tg0d", "Tg0g", "Tg0j", "Tg1Y", "Tg1c", "Tg1g"]
+      }
+      if generation == 1, let match = indexed(["Tm02", "Tm06", "Tm08", "Tm09"], "sensor.memory", .memory) {
+        return match
       }
       if let match = indexed(efficiency, "sensor.cpu.efficiency", .cpu) { return match }
-      if let match = indexed(performance, "sensor.cpu.performance", .cpu) { return match }
+      if let match = indexed(performance, generation == 5 ? "sensor.cpu" : "sensor.cpu.performance", .cpu) { return match }
       if let match = indexed(gpu, "sensor.gpu", .gpu) { return match }
       if generation == 4, let match = indexed(["Tm0p", "Tm1p", "Tm2p"], "sensor.memory", .memory) {
         return match
