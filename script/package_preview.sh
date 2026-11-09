@@ -16,14 +16,15 @@ if [[ "$ARCH" != arm64 ]]; then echo "This preview supports arm64 only." >&2; ex
 /usr/bin/codesign --verify --deep --strict "$APP"
 STAGE="$(mktemp -d "$ROOT_DIR/dist/package-stage.XXXXXX")"
 trap 'rm -rf "$STAGE"' EXIT
-/usr/bin/ditto "$APP" "$STAGE/MyFanControl.app"
+/usr/bin/ditto --norsrc --noextattr --noacl "$APP" "$STAGE/MyFanControl.app"
+/usr/bin/codesign --verify --deep --strict "$STAGE/MyFanControl.app"
 ln -s /Applications "$STAGE/Applications"
 cp INSTALL.md "$STAGE/START HERE.md"
 cp LICENSE THIRD_PARTY_NOTICES.md PRIVACY.md "$STAGE/"
 DMG="$ROOT_DIR/dist/MyFanControl-$VERSION-arm64.dmg"
 ZIP="$ROOT_DIR/dist/MyFanControl-$VERSION-arm64.zip"
 /usr/bin/hdiutil create -quiet -ov -volname "My Fan Control Preview" -srcfolder "$STAGE" -format UDZO "$DMG"
-/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+/usr/bin/ditto -c -k --norsrc --noextattr --noacl --keepParent "$STAGE/MyFanControl.app" "$ZIP"
 (cd "$ROOT_DIR/dist" && /usr/bin/shasum -a 256 "$(basename "$DMG")" "$(basename "$ZIP")" > SHA256SUMS.txt)
 echo "$DMG"
 echo "$ZIP"
