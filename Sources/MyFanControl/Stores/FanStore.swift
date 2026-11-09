@@ -94,10 +94,13 @@ struct TemperaturePoint: Identifiable {
   func start() {
     guard loop == nil else { return }
     loop = Task { [weak self] in
+      let clock = ContinuousClock()
       while !Task.isCancelled {
         guard let self else { break }
+        // Include read time in the one-second cadence; slow reads never queue catch-up polls.
+        let nextRefresh = clock.now.advanced(by: .seconds(1))
         await self.refresh()
-        try? await Task.sleep(for: .seconds(1))
+        try? await clock.sleep(until: nextRefresh)
       }
     }
   }
