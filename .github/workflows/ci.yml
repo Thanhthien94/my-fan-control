@@ -11,7 +11,9 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-and-test:
-    runs-on: macos-15
+    # Standard Intel capacity avoids the hosted arm64 queue failures. Tests run
+    # natively; the distributable is still cross-built and verified as arm64.
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode toolchain
@@ -20,10 +22,13 @@ jobs:
         run: python3 script/check_localization.py
       - name: Test policy and failure recovery with fake hardware
         run: ./script/test.sh
-      - name: Build native app bundle
+      - name: Build Apple Silicon app bundle
+        env:
+          MFC_BUILD_ARCH: arm64
         run: ./script/build_and_run.sh --build-only
       - name: Verify ad-hoc app signature
         run: codesign --verify --deep --strict dist/MyFanControl.app
-      - name: Package preview on Apple Silicon
-        if: runner.arch == 'ARM64'
+      - name: Package and verify Apple Silicon preview
+        env:
+          MFC_BUILD_ARCH: arm64
         run: ./script/package_preview.sh
