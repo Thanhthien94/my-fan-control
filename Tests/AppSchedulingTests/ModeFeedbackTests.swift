@@ -25,4 +25,25 @@ import Testing
     #expect(store.active.isEmpty && store.fans.allSatisfy { !$0.manual })
     #expect(store.operationMessage == nil)
   }
+  @Test func successExpiresWithoutChangingFanControl() async {
+    let (_, hardware, _, defaults) = ScheduleExecutionTests().fixture(.now)
+    var instant = ContinuousClock.now
+    let store = FanStore(hardware: hardware, defaults: defaults, observeSleep: false, feedbackNow: { instant })
+    #expect(await store.activate(FanPreset(name: "Work", mode: .fixed, rpm: 2000), fanIDs: [0]))
+    #expect(store.operationMessage != nil)
+    instant = instant.advanced(by: .seconds(7))
+    await store.refresh()
+    #expect(store.operationMessage == nil && store.active[0] != nil)
+  }
+  @Test func failedAutomaticRequestNeverShowsSuccess() async {
+    let (store, hardware, _, _) = ScheduleExecutionTests().fixture(.now)
+    let preset = FanPreset(name: "Work", mode: .fixed, rpm: 2000)
+    #expect(await store.activate(preset, fanIDs: [0]))
+    await hardware.failOneRestore()
+    var automatic = preset
+    automatic.mode = .automatic
+    #expect(!(await store.activate(automatic, fanIDs: [0])))
+    #expect(store.error != nil && store.operationMessage == nil)
+  }
+
 }

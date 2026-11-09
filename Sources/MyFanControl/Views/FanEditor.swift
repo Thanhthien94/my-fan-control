@@ -14,7 +14,9 @@ struct FanEditor: View {
   private var saved: FanPreset? { store.presets.first(where: { $0.id == draft.id }) }
   private var unchanged: Bool { saved == draft }
   private var draftStatus: FanEditorDraftStatus {
-    FanEditorDraftStatus.resolve(draft: draft, saved: saved, applied: applied)
+    FanEditorDraftStatus.resolve(draft: draft, saved: saved, applied: applied,
+      busy: store.busy, authorizing: store.authorizing,
+      restoring: targetFans.contains(where: { store.restoring.contains($0.id) }), valid: validation == nil)
   }
   private var limits: ClosedRange<Double> {
     let low = targetFans.map(\.minimum).max() ?? fan.minimum
@@ -36,25 +38,29 @@ struct FanEditor: View {
     } catch { return error.localizedDescription }
   }
   private var applied: Bool {
-    if draft.mode == .automatic { return targetFans.allSatisfy { !$0.manual } }
-    return targetFans.allSatisfy { store.active[$0.id] == draft }
+    guard !targetFans.isEmpty else { return false }
+    if draft.mode == .automatic {
+      return targetFans.allSatisfy { !$0.manual && !store.controlled.contains($0.id) && !store.restoring.contains($0.id) }
+    }
+    return targetFans.allSatisfy { store.active[$0.id] == draft && store.controlled.contains($0.id) && !store.restoring.contains($0.id) }
   }
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       SavedPresetList(
         store: store, selectedID: draft.mode == .automatic ? nil : draft.id,
-        fanIDs: targetFans.map(\.id), select: load, newPreset: newPreset)
+        fanIDs: targetFans.map(\.id), select: load, newPreset: newPreset).disabled(store.busy)
       Picker(L10n.t("preset.target"), selection: $applyAll) {
         Text(fan.name).tag(false)
         if store.fans.count > 1 { Text(L10n.t("preset.allFans")).tag(true) }
-      }.pickerStyle(.segmented)
+      }.pickerStyle(.segmented).disabled(store.busy)
       ScrollView {
         VStack(alignment: .leading, spacing: 12) {
-          Picker(L10n.t("Chế độ"), selection: $draft.mode) {
+          Text(L10n.t("mode.draft")).font(.caption).foregroundStyle(.secondary)
+          Picker(L10n.t("mode.draft"), selection: $draft.mode) {
             Text(L10n.t("Tự động")).tag(FanPreset.Mode.automatic)
             Text(L10n.t("RPM cố định")).tag(FanPreset.Mode.fixed)
             Text(L10n.t("Cảm biến")).tag(FanPreset.Mode.sensor)
-          }.pickerStyle(.segmented)
+          }.labelsHidden().pickerStyle(.segmented)
           if draft.mode != .automatic {
             TextField(L10n.t("Tên preset để lưu"), text: $draft.name).textFieldStyle(.roundedBorder)
           }
@@ -113,11 +119,11 @@ struct FanEditor: View {
           }
           if draftStatus == .unsavedPreset {
             Text(L10n.t("preset.unsaved")).font(.caption).foregroundStyle(.orange)
-          } else if draftStatus == .automaticPending {
-            Text(L10n.t("preset.autoPending")).font(.caption).foregroundStyle(.secondary)
+          } else if draftStatus == .automaticPending || draftStatus == .manualPending {
+            Text(L10n.t("mode.pending")).font(.caption).foregroundStyle(.secondary)
           }
         }.padding(.vertical, 2)
-      }.frame(minHeight: 80, maxHeight: .infinity)
+      }.frame(minHeight: 80, maxHeight: .infinity).disabled(store.busy || draftStatus == .restoring)
       Divider()
       if draft.mode != .automatic {
         HStack {
@@ -138,20 +144,20 @@ struct FanEditor: View {
         apply()
       } label: {
         HStack {
-          if store.busy {
+          if draftStatus.inProgress {
             ProgressView().controlSize(.small)
           } else {
-            Image(systemName: store.helperEnabled ? "fan.fill" : "lock.open")
+            Image(systemName: draftStatus.isApplied ? "checkmark.circle.fill" : (store.helperEnabled ? "fan.fill" : "lock.open"))
           }
-          Text(
-            draft.mode != .automatic && !unchanged
-              ? L10n.t("preset.saveApply")
-              : (applyAll ? L10n.t("group.apply") : L10n.f("preset.applyFan", fan.name)))
+          Text(applyTitle)
           Spacer()
         }.frame(maxWidth: .infinity).padding(.vertical, 3)
-      }.buttonStyle(.borderedProminent).disabled(store.busy || validation != nil)
-      Text(store.helperEnabled ? L10n.t("preset.applyHint") : L10n.t("preset.permissionHint"))
-        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+      }.buttonStyle(.borderedProminent)
+        .disabled(store.busy || validation != nil || draftStatus.isApplied || draftStatus == .restoring)
+      if !draftStatus.isApplied, !draftStatus.inProgress {
+        Text(store.helperEnabled ? L10n.t("preset.applyHint") : L10n.t("preset.permissionHint"))
+          .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+      }
     }
     .onAppear {
       if let active = store.active[fan.id] {
@@ -175,6 +181,20 @@ struct FanEditor: View {
         draft.name = store.uniquePresetName(L10n.t("preset.newDefault"))
         draft.sensor = store.preferredSensorID
       }
+    }
+  }
+  private var applyTitle: String {
+    switch draftStatus {
+    case .authorizing: return L10n.t("mode.authorizing")
+    case .applying: return L10n.t("mode.applying")
+    case .restoring: return L10n.t("schedule.restorePending")
+    case .invalid: return L10n.t("mode.review")
+    case .automaticApplied, .manualApplied: return L10n.t("mode.applied")
+    case .automaticPending:
+      return applyAll ? L10n.t("mode.returnAllAuto") : L10n.f("mode.returnFanAuto", fan.name)
+    case .unsavedPreset: return L10n.t("preset.saveApply")
+    case .manualPending:
+      return applyAll ? L10n.t("group.apply") : L10n.f("preset.applyFan", fan.name)
     }
   }
   private func load(_ preset: FanPreset) {

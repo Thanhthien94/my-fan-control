@@ -35,7 +35,7 @@ struct ContentView: View {
           .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(
             .bottom, 16)
       }
-      if let message = store.operationMessage, store.error == nil {
+      if let message = store.operationMessage, store.error == nil, store.helperMessage == nil, store.telemetryError == nil {
         Label(message, systemImage: "checkmark.circle.fill").font(.callout).foregroundStyle(.green)
           .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 24).padding(
             .bottom, 12)
