@@ -51,9 +51,9 @@ final class SMCTelemetryReader {
         }
         manual = (Int(mask) & (1 << id)) != 0
       }
-      // Fan ordering is SMC ordering; two fans do not imply a universal left/right layout.
+      // Display aliases never change SMC ordering or control IDs.
       return Fan(
-        id: id, name: L10n.f("fan.name", id + 1), current: current,
+        id: id, name: FanNames.name(id: id, count: Int(count), model: HardwareIdentity.model), current: current,
         minimum: minimum, maximum: maximum, target: try? number("F\(id)Tg"), manual: manual)
     }
   }
