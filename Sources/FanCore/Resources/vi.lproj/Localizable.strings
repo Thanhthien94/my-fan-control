@@ -191,3 +191,9 @@
 "schedule.title" = "Lịch & hẹn giờ";
 "schedule.type" = "Kiểu hẹn giờ";
 "schedule.weekly" = "Hằng tuần";
+"group.all" = "Điều khiển chung tất cả quạt";
+"group.apply" = "Áp dụng cho tất cả quạt";
+"group.invalid" = "Nhóm quạt không hợp lệ.";
+"group.noCommon" = "Các quạt không có khoảng RPM cố định chung phù hợp. Hãy chỉnh riêng hoặc dùng đường cong cảm biến.";
+"legal.about" = "Giới thiệu My Fan Control";
+"legal.credits" = "Phần mềm miễn phí độc lập · Giấy phép MIT. Không liên kết với Apple hoặc CrystalIDEA. Thông báo bên thứ ba được kèm trong app.";

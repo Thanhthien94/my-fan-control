@@ -48,6 +48,9 @@ cat > "$APP_BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
+SOURCE_REVISION="$(git rev-parse HEAD 2>/dev/null || echo source-archive)"
+/usr/bin/plutil -insert MFCSourceRevision -string "$SOURCE_REVISION" "$APP_BUNDLE/Contents/Info.plist"
+/usr/bin/plutil -insert MFCReleaseLabel -string "$(cat VERSION)" "$APP_BUNDLE/Contents/Info.plist"
 chmod +x "$APP_BUNDLE/Contents/MacOS/"*
 /usr/bin/codesign --force --sign - "$APP_BUNDLE/Contents/MacOS/fanctl"
 /usr/bin/codesign --force --sign - "$APP_BUNDLE"

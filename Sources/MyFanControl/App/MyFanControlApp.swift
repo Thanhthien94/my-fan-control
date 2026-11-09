@@ -36,6 +36,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     .defaultSize(width: 1080, height: 740)
     .commands {
+      CommandGroup(replacing: .appInfo) {
+        Button(L10n.t("legal.about")) {
+          NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationIcon: AppIdentity.icon,
+            .credits: NSAttributedString(string: L10n.t("legal.credits")),
+          ])
+        }
+      }
       CommandGroup(after: .newItem) {
         Button(L10n.t("Tất cả về tự động")) { Task { await store.restoreAll() } }
           .keyboardShortcut("a", modifiers: [.command, .shift]).disabled(!store.helperEnabled)

@@ -12,6 +12,7 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 - Searchable temperature sensors; unknown SMC keys retain their raw identities.
 - Chip-aware component labels and explanations, with community source links and an option to reveal unidentified keys. See [what the sensors measure](docs/sensors.md).
 - Automatic control, bounded fixed RPM, and a linear temperature-based fan curve per fan.
+- One shared manual control for all fans, with per-fan limit validation and rollback on partial failure.
 - Save and reuse named fan presets locally.
 - A menu bar temperature/RPM summary, temperature history and °C/°F display.
 - Native Vietnamese/English localization with a saved language preference.
@@ -20,7 +21,9 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 
 ## Requirements and build
 
-macOS 14 or later, Apple Silicon, and Xcode/Command Line Tools with Swift 6. No external package dependencies. Intel data formats are implemented but Intel hardware is not validated or supported by this preview release.
+Download the Apple Silicon preview from [GitHub Releases](https://github.com/Thanhthien94/my-fan-control/releases), then follow [INSTALL.md](INSTALL.md). Preview downloads require macOS's documented Open Anyway step because they are not Developer ID signed/notarized.
+
+macOS 14 or later, Apple Silicon, and Xcode/Command Line Tools with Swift 6. Fan control requires a Mac with built-in SMC-controlled fans. No external package dependencies. Intel data formats are implemented but Intel hardware is not validated or supported by this preview release.
 
 ```sh
 git clone https://github.com/Thanhthien94/my-fan-control.git
@@ -28,7 +31,7 @@ cd my-fan-control
 ./script/build_and_run.sh
 ```
 
-The script builds a real app bundle at `dist/MyFanControl.app`, signs it ad hoc for local use, and opens it. Use `--build-only` to package without opening. A Codex Run action points to the same script. `MFC_DEVELOPER_DIR` and `MFC_SDK_PATH` allow explicit toolchain/SDK selection; no global Xcode settings are changed.
+The script builds a real app bundle at `dist/MyFanControl.app`, signs it ad hoc for local use, and opens it. Use `--build-only` to package without opening. `MFC_DEVELOPER_DIR` and `MFC_SDK_PATH` allow explicit toolchain/SDK selection; no global Xcode settings are changed.
 
 ```sh
 ./script/test.sh
@@ -82,4 +85,4 @@ Release tags use SemVer, such as `v0.1.0-preview.1`. Preview releases explicitly
 
 ## Independence and license
 
-MIT licensed. This is an independent implementation; it does not patch, unlock, redistribute or include Macs Fan Control code, helpers, artwork or license material. Macs Fan Control is a product of CrystalIDEA. See [analysis notes](docs/reverse-engineering.md) for the limited static observations used to guide the separate architecture.
+MIT licensed. This is an independent project, unaffiliated with Apple or CrystalIDEA. Macs Fan Control is a product of CrystalIDEA. See [analysis notes](docs/reverse-engineering.md) for the limited static observations used to guide the separate architecture, and the [licensing review](docs/legal-and-licensing.md) for artwork, notices, distribution claims and remaining limits.

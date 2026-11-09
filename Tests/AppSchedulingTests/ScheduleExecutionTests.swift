@@ -22,6 +22,21 @@ actor HardwareFake: HardwareBackend {
   }
   func send(_ request: HelperRequest) throws -> HelperResponse {
     commands.append(request.command)
+    if request.command == "configureGroup", let ids = request.fanIDs, let rule = request.preset {
+      do {
+        for id in ids {
+          if id == failFan { throw FanError.invalid("Injected group failure") }
+          if rule.mode == .automatic {
+            policies.removeValue(forKey: id)
+          } else {
+            policies[id] = rule
+          }
+        }
+      } catch {
+        for id in ids { policies.removeValue(forKey: id) }
+        throw error
+      }
+    }
     if request.command == "configure", let id = request.fanID, let rule = request.preset {
       if rule.mode == .automatic, failedRestores > 0 {
         failedRestores -= 1
@@ -36,9 +51,18 @@ actor HardwareFake: HardwareBackend {
   func authorize() {}
   func ids() -> Set<Int> { Set(policies.keys) }
   func configurationCount() -> Int { commands.filter { $0 == "configure" }.count }
+  func groupConfigurationCount() -> Int { commands.filter { $0 == "configureGroup" }.count }
 }
 
 @MainActor struct ScheduleExecutionTests {
+  @Test func sharedManualControlUsesOneGroupRequest() async {
+    let (store, hardware, _, _) = fixture(Date())
+    let preset = FanPreset(name: "Shared", mode: .fixed, rpm: 2500)
+    #expect(await store.applyToAll(preset))
+    #expect(await hardware.ids() == [0, 1])
+    #expect(await hardware.groupConfigurationCount() == 1)
+    #expect(store.active[0]?.id == preset.id && store.active[1]?.id == preset.id)
+  }
   func fixture(_ base: Date) -> (FanStore, HardwareFake, ScheduleStore, UserDefaults) {
     let defaults = UserDefaults(suiteName: "myfan-tests-\(UUID().uuidString)")!
     let hardware = HardwareFake()

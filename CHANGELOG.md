@@ -3,7 +3,7 @@
 ## 0.1.0-preview.1 — 2026-11-09
 
 - Native SwiftUI dashboard, menu bar summary and real AppleSMC fan/temperature monitoring.
-- Per-fan automatic, fixed-RPM and temperature-curve policies, local named presets, and a bounded privileged helper.
+- Per-fan and shared all-fan automatic, fixed-RPM and temperature-curve policies, local named presets, and a bounded privileged helper.
 - Vietnamese and English, with a live language selector.
 - Chip-scoped sensor/component labels, explanations, references and explicit unidentified readings.
 - SkyTruong-palette fan icon with green airflow, native ICNS packaging and explicit Dock icon loading.

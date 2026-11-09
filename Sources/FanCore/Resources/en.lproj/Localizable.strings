@@ -191,3 +191,9 @@
 "schedule.title" = "Schedules & timers";
 "schedule.type" = "Timing";
 "schedule.weekly" = "Weekly";
+"group.all" = "Apply to all fans together";
+"group.apply" = "Apply to all fans";
+"group.invalid" = "Invalid fan group.";
+"group.noCommon" = "These fans do not share a usable fixed-RPM range. Use individual controls or a sensor curve.";
+"legal.about" = "About My Fan Control";
+"legal.credits" = "Independent free software · MIT License. Not affiliated with Apple or CrystalIDEA. Third-party notices are included in the app bundle.";

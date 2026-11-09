@@ -6,10 +6,13 @@ public struct HelperRequest: Codable {
   public var command: String
   public var language: String?
   public var fanID: Int?
+  public var fanIDs: [Int]?
   public var preset: FanPreset?
-  public init(_ command: String, fanID: Int? = nil, preset: FanPreset? = nil) {
+  public init(_ command: String, fanID: Int? = nil, fanIDs: [Int]? = nil, preset: FanPreset? = nil)
+  {
     self.command = command
     self.fanID = fanID
+    self.fanIDs = fanIDs
     self.preset = preset
     self.language = L10n.language
   }
