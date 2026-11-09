@@ -13,6 +13,15 @@ import Testing
     let invalid = AppMetadata(info: ["MFCSourceRevision": "../../malicious"])
     #expect(invalid.sourceURL.absoluteString.hasSuffix("/main"))
   }
+  @Test func corruptSavedPresetsAreKeptForRecoveryAfterTheNextSave() {
+    let (_, hardware, _, defaults) = ScheduleExecutionTests().fixture(Date())
+    let original = Data("corrupt-original-data".utf8)
+    defaults.set(original, forKey: "presets")
+    let store = FanStore(hardware: hardware, defaults: defaults, observeSleep: false)
+    #expect(store.error != nil)
+    store.save(FanPreset(name: "New", mode: .fixed, rpm: 2000))
+    #expect(defaults.data(forKey: "invalidPresetsRecovery") == original)
+  }
   @Test func importingConfigurationNeverAppliesFansOrOverwritesExistingPresets() async throws {
     let (store, hardware, schedules, defaults) = ScheduleExecutionTests().fixture(Date())
     let existing = FanPreset(name: "Existing", mode: .fixed, rpm: 2000)
