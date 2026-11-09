@@ -73,6 +73,22 @@ public final class SMC {
       return self.temperatureKeys ?? []
     })
   public func snapshot() throws -> Snapshot { try telemetry.snapshot() }
+  /// Read-only, deliberately excludes serial numbers, user names and raw sensor dumps.
+  public func compatibilityReport() throws -> CompatibilityReport {
+    let reading = try snapshot()
+    return CompatibilityReport(
+      chip: HardwareIdentity.chip, model: HardwareIdentity.model,
+      fanAvailability: reading.fanAvailability ?? .unavailable,
+      gateAvailable: (try? number("Ftst")) != nil,
+      fans: reading.fans.map { fan in
+        let mode = (try? number("F\(fan.id)md")) != nil ? "F\(fan.id)md"
+          : ((try? number("F\(fan.id)Md")) != nil ? "F\(fan.id)Md" : nil)
+        return CompatibilityReport.FanCapability(
+          fan: fan, modeKey: mode, legacyMaskAvailable: (try? number("FS! ")) != nil,
+          targetAvailable: (try? number("F\(fan.id)Tg")) != nil)
+      }, readableTemperatureCount: reading.sensors.count,
+      mappedTemperatureCount: reading.sensors.filter { SensorCatalog.lookup($0.id).known }.count)
+  }
   public static func sensorName(_ key: String) -> String {
     SensorCatalog.lookup(key).name
   }

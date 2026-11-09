@@ -18,17 +18,15 @@ public struct SensorInfo: Sendable {
 }
 
 public enum HardwareIdentity {
-  public static let chip: String = {
+  private static func value(_ key: String) -> String {
     var size = 0
-    guard sysctlbyname("machdep.cpu.brand_string", nil, &size, nil, 0) == 0, size > 0 else {
-      return "Unknown"
-    }
+    guard sysctlbyname(key, nil, &size, nil, 0) == 0, size > 0 else { return "Unknown" }
     var bytes = [CChar](repeating: 0, count: size)
-    guard sysctlbyname("machdep.cpu.brand_string", &bytes, &size, nil, 0) == 0 else {
-      return "Unknown"
-    }
+    guard sysctlbyname(key, &bytes, &size, nil, 0) == 0 else { return "Unknown" }
     return String(cString: bytes)
-  }()
+  }
+  public static let chip = value("machdep.cpu.brand_string")
+  public static let model = value("hw.model")
 }
 
 /// Exact, case-sensitive, generation-scoped community mappings; never guess from a prefix.

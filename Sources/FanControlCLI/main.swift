@@ -52,6 +52,13 @@ do {
     print("Inactive legacy controller retired")
     exit(0)
   }
+  if args == ["compatibility"] {
+    let report = try SMC().compatibilityReport()
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    print(String(decoding: try encoder.encode(report), as: UTF8.self))
+    exit(0)
+  }
   if args == ["check"] {
     _ = try SMC().snapshot()
     print("AppleSMC ready")

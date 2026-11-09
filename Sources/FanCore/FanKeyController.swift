@@ -165,7 +165,15 @@ final class FanKeyController {
       // Reset every owned mode and target before releasing the global gate. Leaving a
       // nonzero target behind can hold one fan at its last manual RPM after handback.
       for id in ids {
-        if let key = modeKey(id) { try retry(key, 0, attempts: 40) }
+        if let key = modeKey(id) {
+          try retry(key, 0, attempts: 40)
+        } else {
+          let bits = try validatedMask()
+          try retry("FS! ", Double(bits & ~(1 << id)))
+          guard try validatedMask() & (1 << id) == 0 else {
+            throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
+          }
+        }
         try retry("F\(id)Tg", 0, attempts: 40)
       }
       if gate != 0 { try retry("Ftst", 0, attempts: 40) }
