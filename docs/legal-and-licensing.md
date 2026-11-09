@@ -24,6 +24,7 @@ This records the technical licensing checks for the initial preview. It is not a
 - The distributed app is ad-hoc signed. The host had no Developer ID Application identity, and local Gatekeeper assessment rejected the ad-hoc bundle. It is not advertised as notarized or as opening without a macOS warning.
 - Preview installation documents Apple's per-app Open Anyway flow, source verification and standard Applications installation. It does not instruct users to disable Gatekeeper/SIP or remove quarantine.
 - The app stores presets/schedules locally, has no account/analytics/cloud service, and launches the user's browser only when a reference link is chosen.
+- The public privacy statement in PRIVACY.md describes local readings, running-app checks, preferences, helper authentication and deliberate browser links.
 
 ## Release contents
 
