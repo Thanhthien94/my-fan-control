@@ -4,7 +4,9 @@ public protocol FanHardware: AnyObject {
   func snapshot() throws -> Snapshot
   func setTarget(fan: Fan, rpm: Double) throws
   func restore(_ id: Int) throws
+  func restoreSystemControl() throws -> Bool
 }
+extension FanHardware { public func restoreSystemControl() throws -> Bool { false } }
 extension SMC: FanHardware {}
 
 /// Used by the privileged helper. No UI state is trusted as hardware telemetry.
@@ -24,6 +26,17 @@ public final class ControlSession {
     return owned.isEmpty
   }
   private func restoreOrphans() {
+    if rules.isEmpty, !owned.isEmpty {
+      do {
+        if try hardware.restoreSystemControl() {
+          owned.removeAll()
+          return
+        }
+      } catch {
+        notice = error.localizedDescription
+        return
+      }
+    }
     for id in owned.sorted() where rules[id] == nil {
       do {
         try hardware.restore(id)

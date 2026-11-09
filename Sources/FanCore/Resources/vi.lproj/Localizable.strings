@@ -226,3 +226,8 @@
 "preset.deleted" = "Đã xóa “%@”.";
 "preset.startFailure" = "Không thể khởi động điều khiển quạt: %@";
 "preset.permissionTimeout" = "Chưa xác nhận quyền macOS hoặc dịch vụ chưa sẵn sàng. Bấm Áp dụng để thử lại.";
+"schedule.delay" = "Bắt đầu sau (phút)";
+"schedule.minuteUnit" = "Phút";
+"schedule.zeroNow" = "0 = chạy ngay; tối đa 1440 phút.";
+"schedule.runDuration" = "Chạy trong (phút)";
+"schedule.enabled" = "Bật lịch này";

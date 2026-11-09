@@ -25,6 +25,26 @@ final class FanKeyFake {
   }
 }
 struct FanHandoffTests {
+  @Test func automaticHandoffWaitsForFirmwareReadback() throws {
+    let hw = FanKeyFake()
+    var pending = 0
+    let driver = FanKeyController(
+      read: { key in
+        if key == "Ftst", pending > 0 {
+          pending -= 1
+          return 1
+        }
+        return try hw.read(key)
+      },
+      write: { key, value in
+        try hw.write(key, value)
+        if key == "Ftst", value == 0 { pending = 3 }
+      }, wait: { _ in })
+    try driver.setTarget(
+      fan: Fan(id: 0, name: "Left", current: 0, minimum: 1350, maximum: 5777), rpm: 2500)
+    #expect(try driver.returnSystemControl())
+    #expect(hw.values["Ftst"] == 0 && driver.forced.isEmpty)
+  }
   @Test func systemOwnedModeOneIsNotAUserForcedFan() {
     #expect(!FanKeyController.isManual(mode: 1, gate: 0))
     #expect(FanKeyController.isManual(mode: 1, gate: 1))
@@ -54,7 +74,7 @@ struct FanHandoffTests {
     #expect(hw.values["Ftst"] == 1 && hw.values["F0Md"] == 1 && hw.values["F0Tg"] == 2500)
     #expect(hw.waits.contains(3))
     try driver.restore(0)
-    #expect(hw.values["Ftst"] == 0 && hw.values["F0Md"] == 3)
+    #expect(hw.values["Ftst"] == 0 && !FanKeyController.isManual(mode: hw.values["F0Md"]!, gate: 0))
     #expect(driver.forced.isEmpty)
   }
   @Test func restoringOneFanDoesNotResetTheOtherFan() throws {
@@ -67,6 +87,7 @@ struct FanHandoffTests {
     #expect(hw.values["Ftst"] == 1 && hw.values["F1Md"] == 1)
     try driver.restore(1)
     #expect(hw.values["Ftst"] == 0)
+    #expect(hw.values["F0Tg"] == 0 && hw.values["F1Tg"] == 0)
   }
   @Test func failedSpeedWriteStillAllowsGlobalCleanup() {
     let hw = FanKeyFake()

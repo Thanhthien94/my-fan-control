@@ -133,14 +133,16 @@ struct TemperaturePoint: Identifiable {
     defer { busy = false }
     do {
       // Reuse an already-running root helper before asking macOS for authorization.
-      if (try? await hardware.send(HelperRequest("status")))?.protocolVersion != 3 {
+      if (try? await hardware.send(HelperRequest("status")))?.protocolVersion
+        != HelperResponse.currentProtocolVersion
+      {
         try await hardware.authorize()
       }
       var connected = false
       for _ in 0..<600 {
         if let failure = await hardware.authorizationFailure() { throw FanError.helper(failure) }
         if let result = try? await hardware.send(HelperRequest("status")),
-          result.protocolVersion == 3
+          result.protocolVersion == HelperResponse.currentProtocolVersion
         {
           controlled = Set(result.controlled)
           connected = true

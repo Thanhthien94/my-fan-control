@@ -41,7 +41,8 @@ actor HardwareService: HardwareBackend {
     // Keep the authorized service in the foreground of its launcher. Return immediately
     // and let the GUI handshake concurrently; no detached shell jobs or swallowed errors.
     var repair = ""
-    if let status = try? HelperClient.request(HelperRequest("status")), status.protocolVersion != 3,
+    if let status = try? HelperClient.request(HelperRequest("status")),
+      status.protocolVersion != HelperResponse.currentProtocolVersion,
       let pid = HelperClient.serverPID()
     {
       repair = "\(quote(helper.path)) retire --uid \(getuid()) --pid \(pid); "

@@ -13,7 +13,7 @@ actor HardwareFake: HardwareBackend {
   var cancelAuthorization = false
   var authorizationCount = 0
   var bootstrapFailure: String?
-  var responseProtocol = 3
+  var responseProtocol = HelperResponse.currentProtocolVersion
   func useOldProtocol() { responseProtocol = 2 }
   func requireAuthorization(cancel: Bool = false, failure: String? = nil) {
     online = false
@@ -66,7 +66,7 @@ actor HardwareFake: HardwareBackend {
     authorizationCount += 1
     if cancelAuthorization { throw FanError.helper("Authorization canceled") }
     online = bootstrapFailure == nil
-    responseProtocol = 3
+    responseProtocol = HelperResponse.currentProtocolVersion
   }
   func authorizationFailure() -> String? { bootstrapFailure }
   func authorizations() -> Int { authorizationCount }

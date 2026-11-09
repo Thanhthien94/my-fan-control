@@ -138,7 +138,7 @@ static int receive_deadline(int fd, char *buffer, size_t capacity,double timeout
     return -1;
 }
 int mfc_receive(int fd,char *buffer,size_t capacity){return receive_deadline(fd,buffer,capacity,1);}
-int mfc_receive_reply(int fd,char *buffer,size_t capacity){return receive_deadline(fd,buffer,capacity,20);}
+int mfc_receive_reply(int fd,char *buffer,size_t capacity){return receive_deadline(fd,buffer,capacity,45);}
 int mfc_peer_pid(int fd) {pid_t pid=0;socklen_t size=sizeof(pid);return getsockopt(fd,SOL_LOCAL,LOCAL_PEERPID,&pid,&size)==0 ? pid : -1;}
 int mfc_send(int fd, const char *buffer, size_t length) {
     size_t n=0; while(n<length) {ssize_t result=send(fd,buffer+n,length-n,0);

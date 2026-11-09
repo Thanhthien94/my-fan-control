@@ -5,6 +5,11 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
   var store: FanStore?
   func applicationDidFinishLaunching(_ notification: Notification) {
+    let args = CommandLine.arguments
+    if let i = args.firstIndex(of: "--ui-appearance"), args.indices.contains(i + 1) {
+      if args[i + 1] == "dark" { NSApp.appearance = NSAppearance(named: .darkAqua) }
+      if args[i + 1] == "light" { NSApp.appearance = NSAppearance(named: .aqua) }
+    }
     NSApp.setActivationPolicy(.regular)
     NSApp.applicationIconImage = AppIdentity.icon
     NSApp.activate(ignoringOtherApps: true)
@@ -20,6 +25,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main struct MyFanControlApp: App {
+  init() {
+    let args = CommandLine.arguments
+    if let i = args.firstIndex(of: "--ui-language"), args.indices.contains(i + 1),
+      ["vi", "en"].contains(args[i + 1])
+    {
+      L10n.languageOverride = args[i + 1]
+    }
+  }
   @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
   @State private var store = FanStore()
   @AppStorage("language") private var language = "system"

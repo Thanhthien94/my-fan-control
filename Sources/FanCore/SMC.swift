@@ -133,9 +133,15 @@ public final class SMC {
   }
   private lazy var fanController = FanKeyController(
     read: { [unowned self] in try self.number($0) },
-    write: { [unowned self] in try self.writeNumber($0, $1) })
+    write: { [unowned self] in try self.writeNumber($0, $1) },
+    cancelled: { mfc_stop_requested() != 0 })
   public func setTarget(fan: Fan, rpm: Double) throws {
     try fanController.setTarget(fan: fan, rpm: rpm)
   }
   public func restore(_ id: Int) throws { try fanController.restore(id) }
+  public func restoreSystemControl() throws -> Bool { try fanController.returnSystemControl() }
+  public func explicitSystemAutomatic() throws {
+    if try fanController.returnSystemControl(explicit: true) { return }
+    for fan in try snapshot().fans { try restore(fan.id) }
+  }
 }

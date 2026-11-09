@@ -62,9 +62,10 @@ final class HelperServer {
       }
       if var data = try? JSONEncoder().encode(response) {
         data.append(10)
-        _ = data.withUnsafeBytes {
+        let sent = data.withUnsafeBytes {
           mfc_send(client, $0.baseAddress!.assumingMemoryBound(to: CChar.self), data.count)
         }
+        if sent != 0 { session.restoreAll() }
       }
       close(client)
     }

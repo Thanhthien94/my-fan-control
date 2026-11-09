@@ -20,10 +20,6 @@ do {
       throw FanError.invalid("Controller process identity changed.")
     }
     let smc = try SMC()
-    guard try smc.number("Ftst") == 0, try smc.snapshot().fans.allSatisfy({ !$0.manual }) else {
-      throw FanError.invalid(
-        "Return fans to system automatic before restarting the legacy controller.")
-    }
     let query = Process()
     query.executableURL = URL(fileURLWithPath: "/bin/ps")
     query.arguments = ["-p", String(pid), "-o", "comm="]
@@ -37,8 +33,17 @@ do {
     guard query.terminationStatus == 0,
       URL(fileURLWithPath: actual).resolvingSymlinksInPath().path == expected
     else { throw FanError.invalid("Legacy controller executable does not match this app.") }
-    guard kill(pid, SIGKILL) == 0 else {
-      throw FanError.invalid("Could not retire the inactive legacy controller.")
+    guard kill(pid, SIGSTOP) == 0 else {
+      throw FanError.invalid("Could not pause the previous controller.")
+    }
+    do {
+      try smc.explicitSystemAutomatic()
+      guard kill(pid, SIGKILL) == 0 else {
+        throw FanError.invalid("Could not retire the previous controller.")
+      }
+    } catch {
+      kill(pid, SIGCONT)
+      throw error
     }
     for _ in 0..<40 {
       if kill(pid, 0) != 0 { break }

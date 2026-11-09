@@ -18,6 +18,7 @@ public struct HelperRequest: Codable {
   }
 }
 public struct HelperResponse: Codable {
+  public static let currentProtocolVersion = 4
   public var ok: Bool
   public var message: String?
   public var controlled: [Int]
@@ -27,7 +28,7 @@ public struct HelperResponse: Codable {
     self.ok = ok
     self.message = message
     self.controlled = controlled
-    self.protocolVersion = 3
+    self.protocolVersion = Self.currentProtocolVersion
     self.restoring = restoring
   }
 }

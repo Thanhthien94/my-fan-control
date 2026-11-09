@@ -226,3 +226,8 @@
 "preset.deleted" = "Deleted “%@”.";
 "preset.startFailure" = "Could not start fan controls: %@";
 "preset.permissionTimeout" = "macOS authorization or controller startup timed out. Click Apply to try again.";
+"schedule.delay" = "Start after (minutes)";
+"schedule.minuteUnit" = "Minutes";
+"schedule.zeroNow" = "0 starts immediately; maximum 1440 minutes.";
+"schedule.runDuration" = "Run for (minutes)";
+"schedule.enabled" = "Enable this schedule";

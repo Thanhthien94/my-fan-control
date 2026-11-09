@@ -4,8 +4,7 @@ import SwiftUI
 struct ScheduleDashboard: View {
   var store: FanStore
   @Environment(\.dismiss) private var dismiss
-  @State private var showEditor = false
-  @State private var editing: FanSchedule?
+  @State private var editor: ScheduleEditorRequest?
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
       HStack {
@@ -13,8 +12,7 @@ struct ScheduleDashboard: View {
           .title2.weight(.semibold))
         Spacer()
         Button(L10n.t("schedule.new")) {
-          editing = nil
-          showEditor = true
+          editor = ScheduleEditorRequest(schedule: nil)
         }.disabled(store.presets.filter { $0.mode != .automatic }.isEmpty || store.fans.isEmpty)
         Button(L10n.t("schedule.close")) { dismiss() }.keyboardShortcut(.cancelAction)
       }
@@ -34,8 +32,7 @@ struct ScheduleDashboard: View {
           }
           ForEach(store.schedules.items) { item in
             ScheduleRow(item: item, run: store.schedules.running[item.id], store: store) {
-              editing = item
-              showEditor = true
+              editor = ScheduleEditorRequest(schedule: item)
             }
           }
           if !store.schedules.events.isEmpty {
@@ -54,7 +51,7 @@ struct ScheduleDashboard: View {
       Text(L10n.f("schedule.timezone", TimeZone.current.identifier)).font(.caption).foregroundStyle(
         .secondary)
     }.padding(24).frame(width: 740, height: 640)
-      .sheet(isPresented: $showEditor) { ScheduleEditor(store: store, existing: editing) }
+      .sheet(item: $editor) { request in ScheduleEditor(store: store, existing: request.schedule) }
   }
 }
 
@@ -118,4 +115,9 @@ struct ScheduleRow: View {
       }
     }.padding(14).background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
   }
+}
+
+private struct ScheduleEditorRequest: Identifiable {
+  let id = UUID()
+  var schedule: FanSchedule?
 }
