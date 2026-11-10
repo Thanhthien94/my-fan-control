@@ -322,3 +322,4 @@
 "fan.short.right" = "Phải";
 "fan.short.number" = "Q%d";
 "settings.menuPreview" = "Xem trước";
+"menu.snapshotHint" = "Số đo tại lúc mở menu";
