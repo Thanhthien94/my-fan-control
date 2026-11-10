@@ -108,14 +108,27 @@ struct MenuBarLabel: View {
   @AppStorage("fahrenheit") private var fahrenheit = false
   @AppStorage("menuBarSensorID") private var sensorID = ""
   @AppStorage("menuBarShowRPM") private var showRPM = false
+  @AppStorage("menuBarRPMMode") private var rpmMode = ""
   private var sensor: Sensor? { sensorID.isEmpty ? store.hottest : store.sensors.first { $0.id == sensorID } }
   private var label: String {
     let unit: TemperatureUnit = fahrenheit ? .fahrenheit : .celsius
     let text = sensor.map { unit.text($0.celsius, decimals: 0) } ?? "—" + unit.symbol
-    guard showRPM, let rpm = store.fans.map(\.current).max() else { return text }
-    return text + " · \(Int(rpm)) RPM"
+    let display = MenuBarRPMDisplay.resolve(stored: rpmMode, legacyShowRPM: showRPM)
+    guard let rpm = display.readout(store.fans) else { return text }
+    return text + " · " + rpm
   }
-  var body: some View { Label(label, systemImage: "fan") }
+  var body: some View {
+    // MenuBarExtra can apply an icon-only LabelStyle. Use explicit content so
+    // the temperature/RPM text remains visible and its width updates with settings.
+    HStack(spacing: 4) {
+      Image(systemName: "fan")
+      Text(label).monospacedDigit()
+    }
+    .font(.system(size: 12))
+    .fixedSize(horizontal: true, vertical: false)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(label)
+  }
 }
 
 struct FanMenu: View {

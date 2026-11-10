@@ -314,3 +314,11 @@
 "mode.fixedApplied" = "Đã đặt %@: %d RPM cố định · “%@”.";
 "mode.sensorApplied" = "Đã áp dụng cảm biến %@ cho %@ · “%@”.";
 "mode.review" = "Kiểm tra lại cấu hình";
+"settings.menuRPMMode" = "RPM trên menu bar";
+"settings.menuRPM.hidden" = "Ẩn";
+"settings.menuRPM.highest" = "Cao nhất";
+"settings.menuRPM.all" = "Tất cả quạt";
+"fan.short.left" = "Trái";
+"fan.short.right" = "Phải";
+"fan.short.number" = "Q%d";
+"settings.menuPreview" = "Xem trước";

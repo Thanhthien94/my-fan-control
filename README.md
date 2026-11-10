@@ -27,7 +27,7 @@ See the [Apple Silicon compatibility matrix](docs/apple-silicon-compatibility.md
 
 ## Measured resource use
 
-On an M4 Pro (14 logical CPUs, 24 GiB, AC power), two 90-second dashboard runs at 1 Hz averaged **12.46–13.95% of one CPU** and **208–213 MiB median kernel memory footprint**; a menu-bar-only run measured **12.32%** and **82.7 MiB**. These are local process measurements, not FPS or cross-device guarantees. See [method, raw-summary JSON and limitations](docs/performance.md).
+On the 0.3.1 preview on an M4 Pro (14 logical CPUs, 24 GiB, AC power), two 90-second dashboard runs at 1 Hz averaged **12.46–13.95% of one CPU** and **208–213 MiB median kernel memory footprint**; a menu-bar-only run measured **12.32%** and **82.7 MiB**. These are local process measurements, not FPS or cross-device guarantees. See [method, raw-summary JSON and limitations](docs/performance.md).
 
 ## Requirements and build
 
@@ -59,6 +59,8 @@ The test suite uses fake hardware; it never writes to real fans. The snapshot CL
 5. **Tất cả tự động** returns this session's controlled fans to automatic. **Tắt điều khiển** stops the helper after restoration. Closing the main window keeps the menu bar app running; quitting requests restoration and ends the session.
 
 Presets are saved locally and are not automatically applied on startup. Curve thresholds are always expressed in Celsius, including when sensor display uses Fahrenheit. The history chart and menu bar follow the selected display unit; curve settings remain Celsius.
+
+Menu bar RPM: **Settings → General → Menu bar RPM** offers Hidden, Highest and All fans, with a live preview. Values are measured current RPM; choosing a display mode never changes fan control. The previous RPM checkbox choice is preserved on upgrade. Known Mac16,7 display aliases use Left/Right; other topologies keep numbered labels.
 
 ## Schedules and timers
 
