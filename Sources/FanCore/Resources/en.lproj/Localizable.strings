@@ -314,3 +314,11 @@
 "mode.fixedApplied" = "Set %@ to %d fixed RPM · “%@”.";
 "mode.sensorApplied" = "Applied sensor %@ to %@ · “%@”.";
 "mode.review" = "Review configuration";
+"settings.menuRPMMode" = "Menu bar RPM";
+"settings.menuRPM.hidden" = "Hidden";
+"settings.menuRPM.highest" = "Highest";
+"settings.menuRPM.all" = "All fans";
+"fan.short.left" = "Left";
+"fan.short.right" = "Right";
+"fan.short.number" = "F%d";
+"settings.menuPreview" = "Preview";

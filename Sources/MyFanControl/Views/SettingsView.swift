@@ -20,6 +20,11 @@ struct GeneralSettingsView: View {
   @AppStorage("fahrenheit") private var fahrenheit = false
   @AppStorage("menuBarSensorID") private var menuBarSensorID = ""
   @AppStorage("menuBarShowRPM") private var showRPM = false
+  @AppStorage("menuBarRPMMode") private var rpmMode = ""
+  private var rpmSelection: Binding<MenuBarRPMDisplay> {
+    Binding(get: { MenuBarRPMDisplay.resolve(stored: rpmMode, legacyShowRPM: showRPM) },
+      set: { value in rpmMode = value.rawValue; showRPM = value != .hidden })
+  }
   @AppStorage("historyMinutes") private var historyMinutes = 10
   @State private var login = LoginItemController()
   var body: some View {
@@ -40,7 +45,13 @@ struct GeneralSettingsView: View {
             Text(L10n.f("settings.sensorUnavailable", menuBarSensorID)).tag(menuBarSensorID)
           }
         }
-        Toggle(L10n.t("settings.menuRPM"), isOn: $showRPM)
+        Picker(L10n.t("settings.menuRPMMode"), selection: rpmSelection) {
+          ForEach(MenuBarRPMDisplay.allCases, id: \.rawValue) { mode in Text(mode.title).tag(mode) }
+        }.pickerStyle(.segmented)
+        HStack(spacing: 12) {
+          Text(L10n.t("settings.menuPreview")).font(.caption).foregroundStyle(.secondary)
+          ScrollView(.horizontal, showsIndicators: false) { MenuBarLabel(store: store) }
+        }
         Picker(L10n.t("settings.history"), selection: $historyMinutes) {
           ForEach([10, 30, 60], id: \.self) { Text(L10n.f("schedule.minutes", $0)).tag($0) }
         }.pickerStyle(.segmented)
