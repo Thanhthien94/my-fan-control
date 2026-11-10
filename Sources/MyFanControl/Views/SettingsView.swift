@@ -50,7 +50,7 @@ struct GeneralSettingsView: View {
         }.pickerStyle(.segmented)
         HStack(spacing: 12) {
           Text(L10n.t("settings.menuPreview")).font(.caption).foregroundStyle(.secondary)
-          ScrollView(.horizontal, showsIndicators: false) { MenuBarLabel(store: store) }
+          ScrollView(.horizontal, showsIndicators: false) { MenuBarLabel(store: store) }.frame(height: 22)
         }
         Picker(L10n.t("settings.history"), selection: $historyMinutes) {
           ForEach([10, 30, 60], id: \.self) { Text(L10n.f("schedule.minutes", $0)).tag($0) }
