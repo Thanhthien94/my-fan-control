@@ -322,3 +322,4 @@
 "fan.short.right" = "Right";
 "fan.short.number" = "F%d";
 "settings.menuPreview" = "Preview";
+"menu.snapshotHint" = "Readings when menu opened";
