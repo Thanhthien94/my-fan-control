@@ -115,7 +115,18 @@ struct MenuBarLabel: View {
     guard showRPM, let rpm = store.fans.map(\.current).max() else { return text }
     return text + " · \(Int(rpm)) RPM"
   }
-  var body: some View { Label(label, systemImage: "fan") }
+  var body: some View {
+    // MenuBarExtra can apply an icon-only LabelStyle. Use explicit content so
+    // the temperature/RPM text remains visible and its width updates with settings.
+    HStack(spacing: 4) {
+      Image(systemName: "fan")
+      Text(label).monospacedDigit()
+    }
+    .font(.system(size: 12))
+    .fixedSize(horizontal: true, vertical: false)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(label)
+  }
 }
 
 struct FanMenu: View {
