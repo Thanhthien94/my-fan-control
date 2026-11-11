@@ -9,7 +9,7 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 ## Features
 
 - Live fan RPM and hardware minimum/maximum, refreshed every second.
-- App-wide custom minimum RPM (including 0), synchronized with the fixed-RPM slider and sensor curves; **Fan Longevity Protection** (enabled by default) provides optional low-speed startup smoothing. Firmware support varies. See [minimum RPM and soft startup](docs/global-minimum-rpm.md).
+- App-wide custom minimum RPM (including 0), synchronized with the fixed-RPM slider and sensor curves; **Fan Longevity Protection** (enabled by default) keeps app-controlled fans above their hardware floors and increases target RPM gradually (up to 500 RPM/s). Firmware support varies. See [minimum RPM and soft startup](docs/global-minimum-rpm.md).
 - Sensor curves can follow **Hottest sensor (automatic selection)** on every fresh sample (normally 1 Hz), including unidentified readable channels, or remain pinned to one sensor. The latest winner is shown live; presets and schedules retain the dynamic choice.
 - Searchable temperature sensors; the control picker prioritizes identified CPU/GPU/component groups and offers unknown keys separately without discarding the selected sensor.
 - Chip-aware component labels and explanations, with community source links and an option to reveal unidentified keys. See [what the sensors measure](docs/sensors.md).
@@ -74,7 +74,7 @@ This preview is ad-hoc signed, **not Developer ID signed or notarized**. A downl
 
 ## Hardware and safety limits
 
-AppleSMC is an undocumented, model-dependent interface. Supported numeric decoders are `flt `, `sp78`, `fpe2`, `ui8 `, `ui16` and `ui32`. A fan requires readable current/min/max keys. The default lower bound is each fan’s reported minimum. Settings can explicitly override it down to 0 for manual control; each fan’s maximum remains enforced. Low-speed/stop support depends on firmware, and target acknowledgement does not guarantee physical fan stop. See [global minimum RPM and soft startup](docs/global-minimum-rpm.md).
+AppleSMC is an undocumented, model-dependent interface. Supported numeric decoders are `flt `, `sp78`, `fpe2`, `ui8 `, `ui16` and `ui32`. A fan requires readable current/min/max keys. The default lower bound is each fan’s reported minimum. Settings can explicitly request 0 for manual control when Fan Longevity Protection is off; protection on imposes each fan’s hardware floor. Each fan’s maximum remains enforced. Low-speed/stop support depends on firmware, and target acknowledgement does not guarantee physical fan stop. See [global minimum RPM and soft startup](docs/global-minimum-rpm.md).
 
 The helper rereads hardware at the privilege boundary and validates policies independently from the UI. It restores owned fans when any discovered temperature reaches 90°C, all sensors disappear, a selected sensor disappears, a read/write fails, or the client lease expires. It retries failed restoration. It never reapplies a saved custom policy after restarting.
 

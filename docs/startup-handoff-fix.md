@@ -1,4 +1,6 @@
-# Startup protection and the shared SMC gate
+# Historical zero-start protection and the shared SMC gate
+
+This report documents the superseded zero-start implementation. The current [hardware-floor protection policy](fan-longevity-protection.md) replaces its 200-RPM startup behavior; the gate/readback fixes remain.
 
 The user observed two symptoms: right-fan startup appeared to skip smoothing, and a fan rose above 1000 RPM before settling to 200 and beginning its ramp. The fixes below address demonstrated software causes; they do not prove the absence of a firmware-controlled physical kick.
 
