@@ -46,6 +46,7 @@ struct MinimumRPMTests {
   @Test func liveGlobalUpdateAffectsBothFansAndSubsequentSamples() throws {
     let hw = MinimumHardware()
     let session = ControlSession(hardware: hw)
+    try session.setFanProtection(false)
     try session.configureGroup(ids: [0, 1], rule: curve, minimumRPM: 0)
     #expect(hw.targets == [0: 0, 1: 0])
     try session.setMinimumRPM(2000)
@@ -61,15 +62,17 @@ struct MinimumRPMTests {
   @Test func disablingCustomFloorRaisesAnActiveZeroPresetToHardwareMinimum() throws {
     let hw = MinimumHardware()
     let session = ControlSession(hardware: hw)
+    try session.setFanProtection(false)
     try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Stop", mode: .fixed, rpm: 0), minimumRPM: 0)
     try session.setMinimumRPM(nil)
     #expect(hw.targets == [0: 1200, 1: 1500])
     session.tick(leaseAge: 1)
     #expect(hw.targets == [0: 1200, 1: 1500])
   }
-  @Test func invalidGroupFloorIsRejectedBeforeAnyWrite() {
+  @Test func invalidGroupFloorIsRejectedBeforeAnyWrite() throws {
     let hw = MinimumHardware()
     let session = ControlSession(hardware: hw)
+    try session.setFanProtection(false)
     #expect(throws: (any Error).self) {
       try session.configureGroup(ids: [0, 1], rule: curve, minimumRPM: 5500)
     }
@@ -78,6 +81,7 @@ struct MinimumRPMTests {
   @Test func failedLiveUpdateReturnsOwnedFansToAutomatic() throws {
     let hw = MinimumHardware()
     let session = ControlSession(hardware: hw)
+    try session.setFanProtection(false)
     try session.configureGroup(ids: [0, 1], rule: curve, minimumRPM: 0)
     hw.failWrites = true
     #expect(throws: (any Error).self) { try session.setMinimumRPM(2000) }
@@ -90,19 +94,19 @@ struct MinimumRPMTests {
     let session = ControlSession(hardware: hw, now: { time })
     let fixed = FanPreset(name: "Fast", mode: .fixed, rpm: 4500)
     try session.configureGroup(ids: [0, 1], rule: fixed, minimumRPM: 0)
-    #expect(hw.targets == [0: 200, 1: 200])
+    #expect(hw.targets == [0: 1200, 1: 1500])
     try session.configureGroup(ids: [0, 1], rule: fixed, minimumRPM: 0)
-    #expect(hw.targets == [0: 200, 1: 200])
+    #expect(hw.targets == [0: 1200, 1: 1500])
     time = time.advanced(by: .seconds(1))
     session.tick(leaseAge: 1)
-    #expect(hw.targets == [0: 400, 1: 400])
+    #expect(hw.targets == [0: 1700, 1: 2000])
     hw.temperature = 90
     session.tick(leaseAge: 1)
     #expect(hw.restored == [0, 1] && session.activeIDs.isEmpty)
-    #expect(hw.targets == [0: 400, 1: 400])
+    #expect(hw.targets == [0: 1700, 1: 2000])
     hw.temperature = 40
     try session.configure(id: 0, rule: fixed, minimumRPM: 0)
-    #expect(hw.targets[0] == 200)
+    #expect(hw.targets[0] == 1200)
   }
   @Test func zeroTargetStillRequiresSMCTargetAndModeAcknowledgement() throws {
     let hw = FanKeyFake()

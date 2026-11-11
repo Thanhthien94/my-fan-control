@@ -20,6 +20,20 @@ private final class KeepSpinningHardware: FanHardware {
 }
 
 struct KeepSpinningProtectionTests {
+  @Test func alreadySpinningFansRampFromTheirFloorsToTargetInsteadOfJumping() throws {
+    let hw = KeepSpinningHardware()
+    hw.fans = hw.fans.map { var fan = $0; fan.current = fan.minimum; return fan }
+    var time = ContinuousClock.now
+    let session = ControlSession(hardware: hw, now: { time })
+    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Fast", mode: .fixed, rpm: 4500), minimumRPM: 0)
+    #expect(hw.targets == [0: 1200, 1: 1500])
+    for step in 1...7 {
+      time = time.advanced(by: .seconds(1))
+      session.tick(leaseAge: 1)
+      #expect(hw.targets[0] == min(4500, 1200 + Double(step) * 500))
+      #expect(hw.targets[1] == min(4500, 1500 + Double(step) * 500))
+    }
+  }
   @Test func zeroFixedAndCoolCurveUseEachFansOwnHardwareFloorWhenProtected() throws {
     for rule in [FanPreset(name: "Stop", mode: .fixed, rpm: 0),
       FanPreset(name: "Curve", mode: .sensor, sensor: "test")] {
@@ -57,6 +71,17 @@ struct KeepSpinningProtectionTests {
     #expect(throws: (any Error).self) { try session.setFanProtection(false) }
     #expect(session.fanProtectionEnabled)
     #expect(session.owned.isEmpty && hw.restores == [0, 1])
+  }
+  @Test func rawZeroAndClampedDisplayKeepIdentityButRealEditsRemainVisible() {
+    let stored = FanPreset(name: "Stop", mode: .fixed, rpm: 0)
+    var displayed = stored
+    displayed.rpm = 1350
+    #expect(stored.sameControl(as: displayed, atMinimumRPM: 1350))
+    displayed.rpm = 1500
+    #expect(!stored.sameControl(as: displayed, atMinimumRPM: 1350))
+    displayed = stored
+    displayed.id = UUID()
+    #expect(!stored.sameControl(as: displayed, atMinimumRPM: 1350))
   }
   @Test func thermalReturnToAutomaticOverridesKeepSpinningPolicy() throws {
     let hw = KeepSpinningHardware()

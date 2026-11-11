@@ -21,18 +21,18 @@ struct FanProtectionTests {
     let rule = FanPreset(name: "Fast", mode: .fixed, rpm: 4500)
     #expect(session.fanProtectionEnabled)
     try session.configure(id: 0, rule: rule, minimumRPM: 0)
-    #expect(hw.targets.last == 200)
-    session.setFanProtection(false)
+    #expect(hw.targets.last == 1200)
+    try session.setFanProtection(false)
     session.tick(leaseAge: 1)
     #expect(hw.targets.last == 4500)
-    session.setFanProtection(true)
+    try session.setFanProtection(true)
     session.tick(leaseAge: 1)
-    #expect(hw.targets.last == 200)
+    #expect(hw.targets.last == 1200)
   }
   @Test func turningProtectionOffNeverTurnsThermalProtectionOff() throws {
     let hw = ProtectionHardware()
     let session = ControlSession(hardware: hw)
-    session.setFanProtection(false)
+    try session.setFanProtection(false)
     try session.configure(id: 0, rule: FanPreset(name: "Fast", mode: .fixed, rpm: 4500), minimumRPM: 0)
     hw.temperature = 90
     session.tick(leaseAge: 1)

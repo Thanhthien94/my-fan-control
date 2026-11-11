@@ -41,10 +41,10 @@ struct GroupStartupProtectionTests {
     try session.configureGroup(ids: [1, 0],
       rule: FanPreset(name: "Both", mode: .fixed, rpm: 4500), minimumRPM: 0)
     #expect(hw.reads >= 3) // Group baseline plus fresh per-fan privilege-boundary reads.
-    #expect(hw.targets == [0: 200, 1: 200])
+    #expect(hw.targets == [0: 1350, 1: 1350])
     time = time.advanced(by: .seconds(1))
     session.tick(leaseAge: 1)
-    #expect(hw.targets == [0: 400, 1: 400])
+    #expect(hw.targets == [0: 1850, 1: 1850])
   }
   @Test func keepingStartupBaselineDoesNotReuseStaleSafetyTemperatures() {
     let hw = SharedGateStartupHardware()
@@ -54,13 +54,13 @@ struct GroupStartupProtectionTests {
       try session.configureGroup(ids: [0, 1],
         rule: FanPreset(name: "Both", mode: .fixed, rpm: 4500), minimumRPM: 0)
     }
-    #expect(hw.targets[0] == 200 && hw.targets[1] == nil)
+    #expect(hw.targets[0] == 1350 && hw.targets[1] == nil)
     #expect(hw.restored == [0, 1] && session.owned.isEmpty)
   }
   @Test func rightFanOnItsOwnStillUsesSoftStartup() throws {
     let hw = SharedGateStartupHardware()
     let session = ControlSession(hardware: hw)
     try session.configure(id: 1, rule: FanPreset(name: "Right", mode: .fixed, rpm: 4500), minimumRPM: 0)
-    #expect(hw.targets == [1: 200])
+    #expect(hw.targets == [1: 1350])
   }
 }
