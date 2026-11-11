@@ -58,6 +58,15 @@ struct MinimumRPMTests {
     session.tick(leaseAge: 1)
     #expect(hw.targets == [0: 1200, 1: 1500])
   }
+  @Test func disablingCustomFloorRaisesAnActiveZeroPresetToHardwareMinimum() throws {
+    let hw = MinimumHardware()
+    let session = ControlSession(hardware: hw)
+    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Stop", mode: .fixed, rpm: 0), minimumRPM: 0)
+    try session.setMinimumRPM(nil)
+    #expect(hw.targets == [0: 1200, 1: 1500])
+    session.tick(leaseAge: 1)
+    #expect(hw.targets == [0: 1200, 1: 1500])
+  }
   @Test func invalidGroupFloorIsRejectedBeforeAnyWrite() {
     let hw = MinimumHardware()
     let session = ControlSession(hardware: hw)
@@ -73,6 +82,27 @@ struct MinimumRPMTests {
     hw.failWrites = true
     #expect(throws: (any Error).self) { try session.setMinimumRPM(2000) }
     #expect(session.owned.isEmpty && hw.restored == [0, 1])
+  }
+  @Test func helperColdStartCannotBeAcceleratedByRepeatedCommandsAndHeatStillRestores() throws {
+    let hw = MinimumHardware()
+    hw.fans = hw.fans.map { var fan = $0; fan.current = 0; return fan }
+    var time = ContinuousClock.now
+    let session = ControlSession(hardware: hw, now: { time })
+    let fixed = FanPreset(name: "Fast", mode: .fixed, rpm: 4500)
+    try session.configureGroup(ids: [0, 1], rule: fixed, minimumRPM: 0)
+    #expect(hw.targets == [0: 200, 1: 200])
+    try session.configureGroup(ids: [0, 1], rule: fixed, minimumRPM: 0)
+    #expect(hw.targets == [0: 200, 1: 200])
+    time = time.advanced(by: .seconds(1))
+    session.tick(leaseAge: 1)
+    #expect(hw.targets == [0: 400, 1: 400])
+    hw.temperature = 90
+    session.tick(leaseAge: 1)
+    #expect(hw.restored == [0, 1] && session.activeIDs.isEmpty)
+    #expect(hw.targets == [0: 400, 1: 400])
+    hw.temperature = 40
+    try session.configure(id: 0, rule: fixed, minimumRPM: 0)
+    #expect(hw.targets[0] == 200)
   }
   @Test func zeroTargetStillRequiresSMCTargetAndModeAcknowledgement() throws {
     let hw = FanKeyFake()

@@ -53,7 +53,7 @@ final class FanKeyController {
     throw last
   }
   func setTarget(fan: Fan, rpm: Double) throws {
-    guard (0..<10).contains(fan.id), rpm.isFinite, rpm >= fan.minimum, rpm <= fan.maximum else {
+    guard (0..<10).contains(fan.id), rpm.isFinite, rpm >= 0, fan.maximum.isFinite, fan.maximum > 0, fan.maximum <= 20000, rpm <= fan.maximum else {
       throw FanError.invalid(L10n.t("RPM nằm ngoài giới hạn phần cứng."))
     }
     try checkOperation()

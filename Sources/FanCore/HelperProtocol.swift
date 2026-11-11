@@ -8,17 +8,19 @@ public struct HelperRequest: Codable {
   public var fanID: Int?
   public var fanIDs: [Int]?
   public var preset: FanPreset?
-  public init(_ command: String, fanID: Int? = nil, fanIDs: [Int]? = nil, preset: FanPreset? = nil)
+  public var minimumRPM: Double?
+  public init(_ command: String, fanID: Int? = nil, fanIDs: [Int]? = nil, preset: FanPreset? = nil, minimumRPM: Double? = nil)
   {
     self.command = command
     self.fanID = fanID
     self.fanIDs = fanIDs
     self.preset = preset
+    self.minimumRPM = minimumRPM
     self.language = L10n.language
   }
 }
 public struct HelperResponse: Codable {
-  public static let currentProtocolVersion = 7
+  public static let currentProtocolVersion = 8
   public var ok: Bool
   public var message: String?
   public var controlled: [Int]

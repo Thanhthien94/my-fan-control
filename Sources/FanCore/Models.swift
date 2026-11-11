@@ -80,8 +80,8 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
         a.celsius == b.celsius ? a.id > b.id : a.celsius < b.celsius
       }
   }
-  public func target(for fan: Fan, sensors: [Sensor]) throws -> Double? {
-    try target(for: fan, temperature: resolvedSensor(in: sensors)?.celsius)
+  public func target(for fan: Fan, sensors: [Sensor], minimumRPM: Double? = nil) throws -> Double? {
+    try target(for: fan, temperature: resolvedSensor(in: sensors)?.celsius, minimumRPM: minimumRPM)
   }
 
   public var id: UUID = UUID()
@@ -117,17 +117,22 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
       }
     }
   }
-  public func target(for fan: Fan, temperature: Double?) throws -> Double? {
+  public func target(for fan: Fan, temperature: Double?, minimumRPM: Double? = nil) throws -> Double? {
     guard fan.minimum.isFinite, fan.maximum.isFinite, fan.minimum >= 0,
       fan.maximum > fan.minimum, fan.maximum <= 20000
     else { throw FanError.invalid(L10n.t("Giới hạn quạt không hợp lệ.")) }
+    if mode == .automatic { return nil }
+    let low = minimumRPM ?? fan.minimum
+    guard low.isFinite, low >= 0, low <= fan.maximum else {
+      throw FanError.invalid(L10n.f("rpm.minimumInvalid", Int(fan.maximum)))
+    }
     switch mode {
     case .automatic: return nil
     case .fixed:
-      guard rpm.isFinite, rpm >= fan.minimum, rpm <= fan.maximum else {
+      guard rpm.isFinite, rpm >= (minimumRPM == nil ? fan.minimum : 0), rpm <= fan.maximum else {
         throw FanError.invalid(L10n.f("error.rpmBounds", Int(fan.minimum), Int(fan.maximum)))
       }
-      return rpm
+      return max(low, rpm)
     case .sensor:
       guard start.isFinite, full.isFinite, start >= 20, full <= 90, full - start >= 5,
         let t = temperature, t.isFinite, t > 0, t < 130
@@ -137,7 +142,7 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
         )
       }
       let ratio = max(0, min(1, (t - start) / (full - start)))
-      return fan.minimum + ratio * (fan.maximum - fan.minimum)
+      return low + ratio * (fan.maximum - low)
     }
   }
 }

@@ -331,3 +331,13 @@
 "preset.deletedRestored" = "Đã xóa “%@” và trả các quạt đang dùng về tự động.";
 
 "preset.deleteRestoreFailed" = "Đã giữ preset vì chưa xác nhận được quạt về tự động: %@";
+
+"rpm.minimumTitle" = "RPM tối thiểu toàn app";
+"rpm.customMinimum" = "Dùng RPM tối thiểu tùy chỉnh";
+"rpm.minimumHint" = "Áp dụng cho RPM cố định và đường cong cảm biến, gồm preset và lịch; đồng bộ cận dưới thanh kéo RPM. Tắt để dùng mức tối thiểu do từng quạt báo. 0 cho phép yêu cầu dừng; firmware có thể từ chối hoặc vẫn giữ quạt quay. Chế độ Tự động do macOS quản lý.";
+"rpm.softStartHint" = "Khởi động mềm: tăng tối đa 200 RPM/giây dưới 1000 RPM, sau đó 500 RPM/giây. RPM thực tế phụ thuộc firmware. Bảo vệ nhiệt luôn được ưu tiên.";
+"rpm.saveMinimum" = "Áp dụng RPM tối thiểu";
+"rpm.minimumSaved" = "Đã cập nhật RPM tối thiểu.";
+"rpm.minimumInvalid" = "RPM tối thiểu phải là số hợp lệ từ 0 đến %d.";
+"rpm.sliderHint" = "Cận dưới theo RPM tối thiểu toàn app trong Cài đặt. Khởi động từ tốc độ thấp sẽ tăng dần.";
+"rpm.curveRange" = "Đường cong bắt đầu từ %d RPM (mức tối thiểu toàn app hoặc mặc định phần cứng).";

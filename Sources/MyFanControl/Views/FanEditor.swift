@@ -20,20 +20,20 @@ struct FanEditor: View {
       restoring: targetFans.contains(where: { store.restoring.contains($0.id) }), valid: validation == nil)
   }
   private var limits: ClosedRange<Double> {
-    let low = targetFans.map(\.minimum).max() ?? fan.minimum
+    let low = store.minimumRPM ?? (targetFans.map(\.minimum).max() ?? fan.minimum)
     let high = targetFans.map(\.maximum).min() ?? fan.maximum
-    return low...max(low + 1, high)
+    return min(low, high)...max(low, high)
   }
   private var validation: String? {
     do {
-      if applyAll, draft.mode == .fixed,
+      if store.minimumRPM == nil, applyAll, draft.mode == .fixed,
         (targetFans.map(\.minimum).max() ?? 0) >= (targetFans.map(\.maximum).min() ?? 0)
       {
         return L10n.t("group.noCommon")
       }
       for target in targetFans {
         _ = try draft.target(
-          for: target, sensors: store.sensors)
+          for: target, sensors: store.sensors, minimumRPM: store.minimumRPM)
       }
       return nil
     } catch { return error.localizedDescription }
@@ -77,6 +77,7 @@ struct FanEditor: View {
                 .frame(width: 80).textFieldStyle(.roundedBorder)
               Text("RPM").foregroundStyle(.secondary)
             }
+            Text(L10n.t("rpm.sliderHint")).font(.caption).foregroundStyle(.secondary)
             Slider(value: $draft.rpm, in: limits, step: 50) { Text(L10n.t("RPM mục tiêu")) }
             HStack {
               Text("\(Int(limits.lowerBound)) RPM")
@@ -122,6 +123,8 @@ struct FanEditor: View {
               TextField("°C", value: $draft.full, format: .number).frame(width: 50)
               Text("°C")
             }
+            Text(L10n.f("rpm.curveRange", Int(limits.lowerBound)))
+              .font(.caption).foregroundStyle(.secondary)
             Text(L10n.t("Tăng tuyến tính từ RPM tối thiểu đến tối đa giữa hai ngưỡng.")).font(
               .caption
             ).foregroundStyle(.secondary)
@@ -182,19 +185,18 @@ struct FanEditor: View {
           name: L10n.t("Tự động"), mode: .automatic, rpm: min(fan.maximum, max(fan.minimum, 2500)),
           sensor: store.preferredSensorID)
       }
+      clampFixedDraft()
     }
+    .onChange(of: store.minimumRPM) { _, _ in clampFixedDraft() }
     .onChange(of: store.presets.map(\.id)) { previous, current in
       if previous.contains(draft.id), !current.contains(draft.id) {
         draft = FanPreset(name: L10n.t("Tự động"), mode: .automatic,
           rpm: min(limits.upperBound, max(limits.lowerBound, 2500)), sensor: store.preferredSensorID)
       }
     }
-    .onChange(of: applyAll) { _, _ in
-      if draft.mode == .fixed {
-        draft.rpm = min(limits.upperBound, max(limits.lowerBound, draft.rpm))
-      }
-    }
+    .onChange(of: applyAll) { _, _ in clampFixedDraft() }
     .onChange(of: draft.mode) { old, new in
+      clampFixedDraft()
       if new == .sensor, draft.sensor.isEmpty { draft.sensor = store.preferredSensorID }
       if old == .automatic, new != .automatic, saved == nil {
         draft.name = store.uniquePresetName(L10n.t("preset.newDefault"))
@@ -216,8 +218,14 @@ struct FanEditor: View {
       return applyAll ? L10n.t("group.apply") : L10n.f("preset.applyFan", fan.name)
     }
   }
+  private func clampFixedDraft() {
+    if draft.mode == .fixed {
+      draft.rpm = min(limits.upperBound, max(limits.lowerBound, draft.rpm))
+    }
+  }
   private func load(_ preset: FanPreset) {
     draft = preset
+    clampFixedDraft()
     store.error = nil
     store.operationMessage = nil
   }

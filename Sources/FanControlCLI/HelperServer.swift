@@ -77,12 +77,14 @@ final class HelperServer {
       guard let id = request.fanID, let rule = request.preset else {
         throw FanError.invalid(L10n.t("Thiếu quạt hoặc preset."))
       }
-      try session.configure(id: id, rule: rule)
+      try session.configure(id: id, rule: rule, minimumRPM: request.minimumRPM)
     case "configureGroup":
       guard let ids = request.fanIDs, let rule = request.preset else {
         throw FanError.invalid(L10n.t("group.invalid"))
       }
-      try session.configureGroup(ids: ids, rule: rule)
+      try session.configureGroup(ids: ids, rule: rule, minimumRPM: request.minimumRPM)
+    case "setMinimumRPM":
+      try session.setMinimumRPM(request.minimumRPM)
     case "automatic":
       guard session.restoreAll() else {
         throw FanError.helper(session.notice ?? L10n.t("Không khôi phục được quạt."))

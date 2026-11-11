@@ -331,3 +331,13 @@
 "preset.deletedRestored" = "Deleted “%@” and returned its fans to automatic.";
 
 "preset.deleteRestoreFailed" = "Preset kept because automatic control could not be confirmed: %@";
+
+"rpm.minimumTitle" = "App-wide minimum RPM";
+"rpm.customMinimum" = "Use a custom minimum RPM";
+"rpm.minimumHint" = "Applies to fixed RPM and sensor curves, including presets and schedules; sets the RPM slider’s lower bound. Off uses each fan’s reported minimum. 0 allows a stop request; firmware may reject it or keep the fan spinning. Automatic mode remains managed by macOS.";
+"rpm.softStartHint" = "Soft startup: increases by up to 200 RPM/s below 1000 RPM, then 500 RPM/s. Actual RPM depends on firmware. Thermal protection always takes priority.";
+"rpm.saveMinimum" = "Apply minimum RPM";
+"rpm.minimumSaved" = "Minimum RPM updated.";
+"rpm.minimumInvalid" = "Minimum RPM must be a finite number from 0 to %d.";
+"rpm.sliderHint" = "Lower bound follows the app-wide minimum in Settings. Low-speed startup increases gradually.";
+"rpm.curveRange" = "Curve starts at %d RPM (app-wide minimum or hardware default).";
