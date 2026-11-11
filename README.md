@@ -9,6 +9,8 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 ## Features
 
 - Live fan RPM and hardware minimum/maximum, refreshed every second.
+- Hardware-bounded RPM slider and sensor curves. **Fan Longevity Protection** (enabled by default) increases targets gradually from the hardware floor/current speed, up to 500 RPM/s. See [behavior and limits](docs/fan-longevity-protection.md).
+- Sensor curves can follow **Hottest sensor (automatic selection)** on every fresh sample (normally 1 Hz), including unidentified readable channels, or remain pinned to one sensor. The latest winner is shown live; presets and schedules retain the dynamic choice.
 - Searchable temperature sensors; the control picker prioritizes identified CPU/GPU/component groups and offers unknown keys separately without discarding the selected sensor.
 - Chip-aware component labels and explanations, with community source links and an option to reveal unidentified keys. See [what the sensors measure](docs/sensors.md).
 - Automatic control, bounded fixed RPM, and a linear temperature-based fan curve per fan.
@@ -72,7 +74,7 @@ This preview is ad-hoc signed, **not Developer ID signed or notarized**. A downl
 
 ## Hardware and safety limits
 
-AppleSMC is an undocumented, model-dependent interface. Supported numeric decoders are `flt `, `sp78`, `fpe2`, `ui8 `, `ui16` and `ui32`. A fan requires readable current/min/max keys. RPM requests must stay within hardware bounds; fan-stop requests below the reported minimum are rejected.
+AppleSMC is an undocumented, model-dependent interface. Supported numeric decoders are `flt `, `sp78`, `fpe2`, `ui8 `, `ui16` and `ui32`. A fan requires readable current/min/max keys. Manual policy targets use each fan’s reported hardware minimum and maximum; there is no app-wide minimum override. Legacy fixed preset values below that minimum are clamped at application without rewriting the saved definition. Low-speed/stop support depends on firmware, and target acknowledgement does not guarantee physical fan stop. See [global minimum RPM and soft startup](docs/global-minimum-rpm.md).
 
 The helper rereads hardware at the privilege boundary and validates policies independently from the UI. It restores owned fans when any discovered temperature reaches 90°C, all sensors disappear, a selected sensor disappears, a read/write fails, or the client lease expires. It retries failed restoration. It never reapplies a saved custom policy after restarting.
 

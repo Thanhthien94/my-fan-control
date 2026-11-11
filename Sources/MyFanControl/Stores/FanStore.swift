@@ -23,6 +23,11 @@ struct TemperaturePoint: Identifiable {
   var active = [Int: FanPreset]()
   var controlled = Set<Int>()
   var restoring = Set<Int>()
+  private var pendingPresetRestorations = [UUID: Set<Int>]()
+  private(set) var fanProtectionEnabled = true
+  func effectiveMinimumRPM(for fan: Fan) -> Double {
+    fan.minimum
+  }
   var presets: [FanPreset]
   var history = [TemperaturePoint]()
   var selectedFan = 0
@@ -43,6 +48,32 @@ struct TemperaturePoint: Identifiable {
       $0.celsius < $1.celsius
     })?.id
       ?? valid.max(by: { $0.celsius < $1.celsius })?.id ?? ""
+  }
+  @discardableResult func setFanProtection(_ enabled: Bool) async -> Bool {
+    guard !busy, !schedules.isProcessing else { error = L10n.t("operation.busy"); return false }
+    busy = true
+    defer { busy = false }
+    operationMessage = nil
+    do {
+      if helperEnabled {
+        let result = try await hardware.send(HelperRequest("setFanProtection", fanProtectionEnabled: enabled))
+        controlled = Set(result.controlled)
+        restoring = Set(result.restoring ?? [])
+        helperMessage = result.message
+      } else if !active.isEmpty || !controlled.isEmpty || !restoring.isEmpty {
+        throw FanError.helper(L10n.t("Chưa bật quyền điều khiển quạt."))
+      }
+      fanProtectionEnabled = enabled
+      defaults.set(enabled, forKey: "fanProtectionEnabled")
+      error = nil
+      showOperation(L10n.t(enabled ? "protection.enabled" : "protection.disabled"))
+      return true
+    } catch {
+      let message = error.localizedDescription
+      if helperEnabled { await refresh() }
+      self.error = message
+      return false
+    }
   }
   func uniquePresetName(_ base: String) -> String {
     var name = base
@@ -68,6 +99,8 @@ struct TemperaturePoint: Identifiable {
     self.feedbackNow = feedbackNow
     self.hardware = hardware
     self.defaults = defaults
+    self.fanProtectionEnabled = defaults.object(forKey: "fanProtectionEnabled") as? Bool ?? true
+    defaults.removeObject(forKey: "minimumRPM") // Retire the removed global override.
     self.schedules = schedules ?? ScheduleStore(defaults: defaults)
     if let data = defaults.data(forKey: "presets") {
       do {
@@ -188,7 +221,7 @@ struct TemperaturePoint: Identifiable {
     busy = true
     defer { busy = false }
     do {
-      let result = try await hardware.send(HelperRequest("configure", fanID: id, preset: rule))
+      let result = try await hardware.send(HelperRequest("configure", fanID: id, preset: rule, fanProtectionEnabled: fanProtectionEnabled))
       controlled = Set(result.controlled)
       if controlled.contains(id) { active[id] = rule } else { active.removeValue(forKey: id) }
       helperMessage = result.message
@@ -232,10 +265,10 @@ struct TemperaturePoint: Identifiable {
     do {
       for fan in snapshot.fans {
         _ = try rule.target(
-          for: fan, temperature: snapshot.sensors.first(where: { $0.id == rule.sensor })?.celsius)
+          for: fan, sensors: snapshot.sensors)
       }
       let result = try await hardware.send(
-        HelperRequest("configureGroup", fanIDs: snapshot.fans.map(\.id), preset: rule))
+        HelperRequest("configureGroup", fanIDs: snapshot.fans.map(\.id), preset: rule, fanProtectionEnabled: fanProtectionEnabled))
       controlled = Set(result.controlled)
       for fan in snapshot.fans {
         if controlled.contains(fan.id) {
@@ -334,7 +367,7 @@ struct TemperaturePoint: Identifiable {
           throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
         }
         _ = try rule.target(
-          for: fan, temperature: reading.sensors.first(where: { $0.id == rule.sensor })?.celsius)
+          for: fan, sensors: reading.sensors)
       }
       if rule.mode == .automatic, !helperEnabled,
         reading.fans.filter({ fanIDs.contains($0.id) }).allSatisfy({ !$0.manual })
@@ -373,8 +406,12 @@ struct TemperaturePoint: Identifiable {
     let message: String
     switch rule.mode {
     case .automatic: message = L10n.t("preset.alreadyAuto")
-    case .fixed: message = L10n.f("mode.fixedApplied", scope, Int(rule.rpm), rule.name)
-    case .sensor: message = L10n.f("mode.sensorApplied", rule.sensor, scope, rule.name)
+    case .fixed:
+      let targets = fans.filter { fanIDs.contains($0.id) }.map {
+        "\($0.name): \(Int(max(rule.rpm, effectiveMinimumRPM(for: $0)))) RPM"
+      }.joined(separator: ", ")
+      message = L10n.f("mode.fixedAppliedTargets", targets, rule.name)
+    case .sensor: message = L10n.f("mode.sensorApplied", rule.sensorTitle, scope, rule.name)
     }
     showOperation(message, expecting: Dictionary(uniqueKeysWithValues: fanIDs.map { ($0, rule) }))
   }
@@ -423,12 +460,56 @@ struct TemperaturePoint: Identifiable {
     return try encoder.encode(Report(appVersion: meta.version, build: meta.build,
       revision: meta.revision, macOS: ProcessInfo.processInfo.operatingSystemVersionString, hardware: report))
   }
-  func deletePreset(_ id: UUID) {
-    let name = presets.first(where: { $0.id == id })?.name ?? ""
+  @discardableResult func deletePreset(_ id: UUID) async -> Bool {
+    guard !busy, !schedules.isProcessing else {
+      error = L10n.t("operation.busy")
+      return false
+    }
+    guard let preset = presets.first(where: { $0.id == id }) else { return false }
+    // Match the stable identity: a saved definition may differ from its running copy.
+    let pending = (pendingPresetRestorations[id] ?? []).filter {
+      active[$0] == nil || active[$0]?.id == id
+    }
+    let affected = Set(active.filter { $0.value.id == id }.keys).union(pending).sorted()
+    pendingPresetRestorations[id] = Set(affected)
+    operationMessage = nil
+    error = nil
+    busy = true
+    defer { busy = false }
+    var failure: String?
+    let automatic = FanPreset(name: L10n.t("Tự động"), mode: .automatic)
+    // Keep the operation locked across awaits so schedules cannot reclaim restored fans.
+    for fanID in affected {
+      do {
+        guard helperEnabled else {
+          throw FanError.helper(L10n.t("Chưa bật quyền điều khiển quạt."))
+        }
+        let result = try await hardware.send(
+          HelperRequest("configure", fanID: fanID, preset: automatic))
+        controlled = Set(result.controlled)
+        restoring = Set(result.restoring ?? [])
+        helperMessage = result.message
+        guard !controlled.contains(fanID), !restoring.contains(fanID) else {
+          throw FanError.helper(L10n.t("schedule.restorePending"))
+        }
+        active.removeValue(forKey: fanID)
+        pendingPresetRestorations[id]?.remove(fanID)
+        schedules.manualOverride(fanID: fanID)
+      } catch {
+        // Attempt the other affected fans too; retain the preset if any restore fails.
+        if failure == nil { failure = error.localizedDescription }
+      }
+    }
+    if let failure {
+      error = L10n.f("preset.deleteRestoreFailed", failure)
+      return false
+    }
+    pendingPresetRestorations.removeValue(forKey: id)
     presets.removeAll { $0.id == id }
     persist()
-    error = nil
-    showOperation(L10n.f("preset.deleted", name))
+    if !affected.isEmpty { await refresh() }
+    showOperation(L10n.f(affected.isEmpty ? "preset.deleted" : "preset.deletedRestored", preset.name))
+    return true
   }
   private func persist() {
     if let data = try? JSONEncoder().encode(presets) {

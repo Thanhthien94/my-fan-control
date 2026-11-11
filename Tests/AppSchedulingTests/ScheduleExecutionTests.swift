@@ -7,8 +7,15 @@ import Testing
 actor HardwareFake: HardwareBackend {
   var policies = [Int: FanPreset]()
   var commands = [String]()
+  var requestedProtections = [Bool?]()
+  var rejectsProtection = false
+  func protectionRequests() -> [Bool?] { requestedProtections }
+  func rejectProtectionUpdate() { rejectsProtection = true }
   var failFan: Int?
   var failedRestores = 0
+  var unconfirmedRestore = false
+  var retirePolicyOnRestoreFailure = false
+  var pendingRestores = Set<Int>()
   var online = true
   var cancelAuthorization = false
   var authorizationCount = 0
@@ -21,20 +28,30 @@ actor HardwareFake: HardwareBackend {
     bootstrapFailure = failure
   }
   func handBackAll() { policies = [:] }
-  func failOneRestore() { failedRestores = 1 }
+  func failOneRestore(retirePolicy: Bool = false) {
+    failedRestores = 1
+    retirePolicyOnRestoreFailure = retirePolicy
+  }
+  func leaveRestoreUnconfirmed() { unconfirmedRestore = true }
   func fail(on id: Int) { failFan = id }
   func read() -> Snapshot {
     Snapshot(
       fans: (0..<2).map { id in
         Fan(
           id: id, name: "Fan", current: 2000, minimum: 1000, maximum: 6000,
-          manual: policies[id] != nil)
+          manual: policies[id] != nil || pendingRestores.contains(id))
       },
       sensors: [Sensor(id: "test", name: "Sensor", celsius: 50)])
   }
   func send(_ request: HelperRequest) throws -> HelperResponse {
     guard online else { throw FanError.helper("Authorization required") }
     commands.append(request.command)
+    if ["configure", "configureGroup", "setFanProtection"].contains(request.command) {
+      requestedProtections.append(request.fanProtectionEnabled)
+    }
+    if request.command == "setFanProtection", rejectsProtection {
+      throw FanError.helper("Protection update rejected")
+    }
     if request.command == "configureGroup", let ids = request.fanIDs, let rule = request.preset {
       do {
         for id in ids {
@@ -53,13 +70,22 @@ actor HardwareFake: HardwareBackend {
     if request.command == "configure", let id = request.fanID, let rule = request.preset {
       if rule.mode == .automatic, failedRestores > 0 {
         failedRestores -= 1
+        if retirePolicyOnRestoreFailure {
+          policies.removeValue(forKey: id)
+          pendingRestores.insert(id)
+        }
         throw FanError.invalid("Injected restore failure")
       }
       if id == failFan, rule.mode != .automatic { throw FanError.invalid("Injected failure") }
-      if rule.mode == .automatic { policies.removeValue(forKey: id) } else { policies[id] = rule }
+      if rule.mode == .automatic {
+        if !unconfirmedRestore {
+          policies.removeValue(forKey: id)
+          pendingRestores.remove(id)
+        }
+      } else { policies[id] = rule }
     }
     if request.command == "automatic" || request.command == "shutdown" { policies = [:] }
-    var response = HelperResponse(ok: true, controlled: policies.keys.sorted())
+    var response = HelperResponse(ok: true, controlled: policies.keys.sorted(), restoring: pendingRestores.sorted())
     response.protocolVersion = responseProtocol
     return response
   }

@@ -35,7 +35,10 @@ struct SavedPresetList: View {
                       Text(preset.summary).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
-                    if fanIDs.allSatisfy({ store.active[$0] == preset }) {
+                    if fanIDs.allSatisfy({ id in
+                      guard let fan = store.fans.first(where: { $0.id == id }) else { return false }
+                      return store.active[id]?.sameControl(as: preset, atMinimumRPM: store.effectiveMinimumRPM(for: fan)) == true
+                    }) {
                       Text(L10n.t("preset.inUse")).font(.caption).foregroundStyle(.green)
                     }
                   }.padding(9).contentShape(Rectangle())
@@ -62,7 +65,9 @@ struct SavedPresetList: View {
       titleVisibility: .visible
     ) {
       Button(L10n.t("Xóa preset"), role: .destructive) {
-        if let preset = pendingDelete { store.deletePreset(preset.id) }
+        if let preset = pendingDelete {
+          Task { await store.deletePreset(preset.id) }
+        }
         pendingDelete = nil
       }
       Button(L10n.t("schedule.close"), role: .cancel) { pendingDelete = nil }
@@ -75,7 +80,7 @@ extension FanPreset {
     switch mode {
     case .automatic: return L10n.t("Tự động hệ thống")
     case .fixed: return String(format: "%.0f RPM", rpm)
-    case .sensor: return "\(sensor) · \(Int(start))–\(Int(full))°C"
+    case .sensor: return "\(sensorTitle) · \(Int(start))–\(Int(full))°C"
     }
   }
 }

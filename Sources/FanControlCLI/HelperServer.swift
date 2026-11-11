@@ -77,12 +77,23 @@ final class HelperServer {
       guard let id = request.fanID, let rule = request.preset else {
         throw FanError.invalid(L10n.t("Thiếu quạt hoặc preset."))
       }
+      if rule.mode != .automatic, let enabled = request.fanProtectionEnabled {
+        try session.setFanProtection(enabled)
+      }
       try session.configure(id: id, rule: rule)
     case "configureGroup":
       guard let ids = request.fanIDs, let rule = request.preset else {
         throw FanError.invalid(L10n.t("group.invalid"))
       }
+      if rule.mode != .automatic, let enabled = request.fanProtectionEnabled {
+        try session.setFanProtection(enabled)
+      }
       try session.configureGroup(ids: ids, rule: rule)
+    case "setFanProtection":
+      guard let enabled = request.fanProtectionEnabled else {
+        throw FanError.invalid(L10n.t("protection.invalid"))
+      }
+      try session.setFanProtection(enabled)
     case "automatic":
       guard session.restoreAll() else {
         throw FanError.helper(session.notice ?? L10n.t("Không khôi phục được quạt."))

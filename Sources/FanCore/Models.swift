@@ -66,6 +66,24 @@ public enum FanError: LocalizedError {
 }
 
 public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
+  /// Reserved selector, deliberately distinct from any four-byte SMC key.
+  /// Persist the selection, never the current winner, so presets and schedules stay dynamic.
+  public static let hottestSensorID = "auto:hottest"
+  public var followsHottestSensor: Bool { sensor == Self.hottestSensorID }
+  public var sensorTitle: String {
+    followsHottestSensor ? L10n.t("sensor.hottest") : sensor
+  }
+  public func resolvedSensor(in sensors: [Sensor]) -> Sensor? {
+    guard followsHottestSensor else { return sensors.first { $0.id == sensor } }
+    return sensors.filter { $0.celsius.isFinite && $0.celsius > 0 && $0.celsius < 130 }
+      .max { a, b in
+        a.celsius == b.celsius ? a.id > b.id : a.celsius < b.celsius
+      }
+  }
+  public func target(for fan: Fan, sensors: [Sensor]) throws -> Double? {
+    try target(for: fan, temperature: resolvedSensor(in: sensors)?.celsius)
+  }
+
   public var id: UUID = UUID()
   public var name: String
   public var mode: Mode
@@ -85,13 +103,25 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
     self.start = start
     self.full = full
   }
+  /// Compare a fixed preset displayed at its effective floor with its stored raw RPM.
+  public func sameControl(as other: FanPreset, atMinimumRPM floor: Double) -> Bool {
+    var lhs = self
+    var rhs = other
+    if lhs.mode == .fixed, rhs.mode == .fixed {
+      lhs.rpm = max(lhs.rpm, floor)
+      rhs.rpm = max(rhs.rpm, floor)
+    }
+    return lhs == rhs
+  }
   public func validateDefinition() throws {
     guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, name.count <= 80,
       rpm.isFinite, start.isFinite, full.isFinite, rpm >= 0, rpm <= 20000 else {
       throw FanError.invalid(L10n.t("preset.invalidDefinition"))
     }
     if mode == .sensor {
-      guard sensor.utf8.count == 4, sensor.utf8.allSatisfy({ (32...126).contains($0) }),
+      let validSource = followsHottestSensor
+        || (sensor.utf8.count == 4 && sensor.utf8.allSatisfy({ (32...126).contains($0) }))
+      guard validSource,
         start >= 20, full <= 90, full - start >= 5 else {
         throw FanError.invalid(L10n.t("preset.invalidDefinition"))
       }
@@ -101,13 +131,15 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
     guard fan.minimum.isFinite, fan.maximum.isFinite, fan.minimum >= 0,
       fan.maximum > fan.minimum, fan.maximum <= 20000
     else { throw FanError.invalid(L10n.t("Giới hạn quạt không hợp lệ.")) }
+    if mode == .automatic { return nil }
+    let low = try FanRPMPolicy.minimum(for: fan)
     switch mode {
     case .automatic: return nil
     case .fixed:
-      guard rpm.isFinite, rpm >= fan.minimum, rpm <= fan.maximum else {
+      guard rpm.isFinite, rpm >= 0, rpm <= fan.maximum else {
         throw FanError.invalid(L10n.f("error.rpmBounds", Int(fan.minimum), Int(fan.maximum)))
       }
-      return rpm
+      return max(low, rpm)
     case .sensor:
       guard start.isFinite, full.isFinite, start >= 20, full <= 90, full - start >= 5,
         let t = temperature, t.isFinite, t > 0, t < 130
@@ -117,7 +149,7 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
         )
       }
       let ratio = max(0, min(1, (t - start) / (full - start)))
-      return fan.minimum + ratio * (fan.maximum - fan.minimum)
+      return low + ratio * (fan.maximum - low)
     }
   }
 }

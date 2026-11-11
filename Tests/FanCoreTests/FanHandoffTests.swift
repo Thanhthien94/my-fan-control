@@ -25,6 +25,54 @@ final class FanKeyFake {
   }
 }
 struct FanHandoffTests {
+  @Test func lowTargetsFollowSharedGateAcknowledgementWithoutFixedSpinupDelay() throws {
+    let hw = FanKeyFake()
+    var gateOpened = false
+    var firstLowTarget = false
+    var delayedBeforeFirstTarget = 0.0
+    let driver = FanKeyController(read: hw.read, write: { key, value in
+      try hw.write(key, value)
+      if key == "Ftst", value == 1 { gateOpened = true }
+      if key == "F0Tg", value == 200 { firstLowTarget = true }
+    }, wait: { seconds in
+      if gateOpened && !firstLowTarget { delayedBeforeFirstTarget += seconds }
+    })
+    driver.beginControlOperation()
+    try driver.setTarget(fan: fan, rpm: 200)
+    try driver.setTarget(fan: Fan(id: 1, name: "Right", current: 0, minimum: 1350, maximum: 5777), rpm: 200)
+    #expect(delayedBeforeFirstTarget == 0)
+    #expect(hw.values["F0Tg"] == 200 && hw.values["F1Tg"] == 200)
+    #expect(hw.values["F0Md"] == 1 && hw.values["F1Md"] == 1)
+  }
+  @Test func delayedGateAcknowledgementUsesBoundedReadbackInsteadOfFixedSleep() throws {
+    let hw = FanKeyFake()
+    var pending = 0
+    var waited = 0.0
+    let driver = FanKeyController(read: { key in
+      if key == "Ftst", pending > 0 { pending -= 1; return 0 }
+      return try hw.read(key)
+    }, write: { key, value in
+      try hw.write(key, value)
+      if key == "Ftst", value == 1 { pending = 2 }
+    }, wait: { waited += $0 })
+    try driver.setTarget(fan: fan, rpm: 200)
+    #expect(waited > 0 && waited < 0.2)
+    #expect(hw.values["F0Tg"] == 200 && hw.values["F0Md"] == 1)
+  }
+  @Test func temporarilyRejectedModeDoesNotDelayTheLowTargetWrite() throws {
+    let hw = FanKeyFake()
+    var modeAttempts = 0
+    let driver = FanKeyController(read: hw.read, write: { key, value in
+      if key == "F0Md", value == 1 {
+        modeAttempts += 1
+        if hw.values["F0Tg"] == 0 { throw FanError.read(key, -130) }
+      }
+      try hw.write(key, value)
+    }, wait: { _ in })
+    try driver.setTarget(fan: fan, rpm: 200)
+    #expect(modeAttempts == 2)
+    #expect(hw.values["F0Md"] == 1 && hw.values["F0Tg"] == 200)
+  }
   @Test func automaticHandoffWaitsForFirmwareReadback() throws {
     let hw = FanKeyFake()
     var pending = 0
@@ -72,7 +120,7 @@ struct FanHandoffTests {
     let driver = hw.controller()
     try driver.setTarget(fan: fan, rpm: 2500)
     #expect(hw.values["Ftst"] == 1 && hw.values["F0Md"] == 1 && hw.values["F0Tg"] == 2500)
-    #expect(hw.waits.contains(3))
+    #expect(!hw.waits.contains(3))
     try driver.restore(0)
     #expect(hw.values["Ftst"] == 0 && !FanKeyController.isManual(mode: hw.values["F0Md"]!, gate: 0))
     #expect(driver.forced.isEmpty)

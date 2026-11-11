@@ -38,6 +38,8 @@ struct GeneralSettingsView: View {
         Toggle(L10n.t("Hiển thị cảm biến bằng °F"), isOn: $fahrenheit)
         LabeledContent(L10n.t("Cập nhật"), value: L10n.t("Mỗi 1 giây"))
         Divider()
+        FanProtectionSettings(store: store)
+        Divider()
         Picker(L10n.t("settings.menuSensor"), selection: $menuBarSensorID) {
           Text(L10n.t("Cảm biến nóng nhất")).tag("")
           ForEach(store.sensors) { sensor in Text(sensor.name + " · " + sensor.id).tag(sensor.id) }
@@ -155,5 +157,28 @@ struct SupportSettingsView: View {
         if let feedback { Text(feedback).font(.callout).textSelection(.enabled) }
       }.padding(16)
     }
+  }
+}
+
+
+private struct FanProtectionSettings: View {
+  var store: FanStore
+  @State private var feedback: String?
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Toggle(L10n.t("protection.title"), isOn: Binding(
+        get: { store.fanProtectionEnabled },
+        set: { enabled in
+          Task {
+            let success = await store.setFanProtection(enabled)
+            feedback = success ? L10n.t(enabled ? "protection.enabled" : "protection.disabled") : store.error
+          }
+        }))
+      Text(L10n.t("protection.detail")).font(.caption).foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+      Text(L10n.t("rpm.softStartHint")).font(.caption).foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+      if let feedback { Text(feedback).font(.caption).textSelection(.enabled) }
+    }.disabled(store.busy)
   }
 }

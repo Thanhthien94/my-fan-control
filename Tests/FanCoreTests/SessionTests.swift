@@ -24,6 +24,7 @@ struct SessionTests {
   @Test func testDisconnectRestoresAndStopsFurtherWrites() throws {
     let hw = HardwareStub()
     let control = ControlSession(hardware: hw)
+    try control.setFanProtection(false)
     try control.configure(id: 0, rule: FanPreset(name: "Fixed", mode: .fixed, rpm: 2500))
     control.tick(leaseAge: 10)
     #expect(hw.restores == [0])

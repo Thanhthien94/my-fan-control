@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-11",
+  "model": "Mac16,7",
+  "sourceRevision": "1949a1a849e3bc26ca36fa2853e6e9768b59a0c5",
+  "helperProtocol": 10,
+  "requestedFinalRPM": 3150,
+  "protectionEnabled": true,
+  "minimumRPM": 0,
+  "sampleCount": 1200,
+  "medianSampleIntervalSeconds": 0.10535099999999886,
+  "gateOpened": {
+    "seconds": 23.175765,
+    "gate": 1.0,
+    "left_mode": 3.0,
+    "right_mode": 3.0,
+    "left_rpm": 0.0,
+    "right_rpm": 0.0,
+    "left_target": 0.0,
+    "right_target": 0.0
+  },
+  "reportedMinimumTargetsBeforeManual": {
+    "seconds": 26.324543,
+    "gate": 1.0,
+    "left_mode": 0.0,
+    "right_mode": 0.0,
+    "left_rpm": 0.0,
+    "right_rpm": 0.0,
+    "left_target": 1350.0,
+    "right_target": 1458.0
+  },
+  "bothManual": {
+    "seconds": 31.044043,
+    "gate": 1.0,
+    "left_mode": 1.0,
+    "right_mode": 1.0,
+    "left_rpm": 1239.836,
+    "right_rpm": 1360.328,
+    "left_target": 200.0,
+    "right_target": 200.0
+  },
+  "leftPeakWhileTargetAtMost400": {
+    "seconds": 31.362049,
+    "gate": 1.0,
+    "left_mode": 1.0,
+    "right_mode": 1.0,
+    "left_rpm": 1568.668,
+    "right_rpm": 1509.301,
+    "left_target": 287.053,
+    "right_target": 226.677
+  },
+  "rightPeakWhileTargetAtMost400": {
+    "seconds": 31.25801,
+    "gate": 1.0,
+    "left_mode": 1.0,
+    "right_mode": 1.0,
+    "left_rpm": 1362.573,
+    "right_rpm": 1552.367,
+    "left_target": 200.0,
+    "right_target": 226.677
+  }
+}

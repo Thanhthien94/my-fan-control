@@ -26,6 +26,7 @@ struct ScheduleEvent: Identifiable {
   private var lastTick: Date
   private let defaults: UserDefaults
   private var processing = false
+  var isProcessing: Bool { processing }
   init(defaults: UserDefaults = .standard, lastTick: Date = Date()) {
     self.defaults = defaults
     self.lastTick = lastTick

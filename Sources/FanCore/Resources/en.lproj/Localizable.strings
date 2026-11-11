@@ -215,7 +215,7 @@
 "preset.applyHint" = "Select a saved preset above, review its settings, then Apply.";
 "preset.permissionHint" = "Apply will ask for macOS administrator permission the first time. Selecting or saving a preset does not change fan speed.";
 "preset.deleteNamed" = "Delete %@";
-"preset.confirmDelete" = "Delete preset “%@”? Existing schedules keep their own settings.";
+"preset.confirmDelete" = "Delete preset “%@”? Fans using it will return to automatic first. Existing schedules keep their own settings.";
 "preset.nameRequired" = "Enter a preset name (1–80 characters).";
 "preset.duplicateName" = "That name already exists. Select it to update, or choose another name.";
 "preset.limit" = "You can save up to 50 presets.";
@@ -323,3 +323,25 @@
 "fan.short.number" = "F%d";
 "settings.menuPreview" = "Preview";
 "menu.snapshotHint" = "Readings when menu opened";
+
+"sensor.hottest" = "Hottest sensor (automatic selection)";
+"sensor.hottestHint" = "Uses the highest valid temperature across all readable sensors, including unidentified SMC keys. Reselects on every fresh sample (normally once a second).";
+"sensor.hottestCurrent" = "Hottest in latest sample: %@ · %@";
+
+"preset.deletedRestored" = "Deleted “%@” and returned its fans to automatic.";
+
+"preset.deleteRestoreFailed" = "Preset kept because automatic control could not be confirmed: %@";
+
+"rpm.softStartHint" = "Increase target RPM from the effective floor or current running speed, up to 500 RPM/s toward the requested target within the hardware maximum. Reductions and automatic restoration are immediate. The initial firmware kick is not guaranteed to be prevented; no long-term lifetime measurements are available.";
+"rpm.sliderHint" = "The slider follows hardware bounds. With protection on, target RPM rises gradually from the floor or current running speed.";
+"rpm.curveRange" = "Hardware curve floors: %@.";
+
+"protection.title" = "Fan Longevity Protection";
+"protection.detail" = "Use each fan’s hardware minimum and increase targets gradually from that floor or current running RPM. Automatic mode is managed by macOS; firmware can still cause the initial startup kick.";
+"protection.enabled" = "Protection enabled: hardware RPM floors apply during manual control.";
+"protection.disabled" = "Soft increases disabled. Hardware bounds and thermal protection remain active.";
+"protection.invalid" = "Missing Fan Longevity Protection state.";
+"rpm.sliderHintUnprotected" = "The slider follows hardware bounds. Soft increases are off.";
+
+
+"mode.fixedAppliedTargets" = "Targets set: %@ · “%@”.";
