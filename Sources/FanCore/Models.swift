@@ -80,8 +80,8 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
         a.celsius == b.celsius ? a.id > b.id : a.celsius < b.celsius
       }
   }
-  public func target(for fan: Fan, sensors: [Sensor], minimumRPM: Double? = nil, fanProtectionEnabled: Bool = false) throws -> Double? {
-    try target(for: fan, temperature: resolvedSensor(in: sensors)?.celsius, minimumRPM: minimumRPM, fanProtectionEnabled: fanProtectionEnabled)
+  public func target(for fan: Fan, sensors: [Sensor]) throws -> Double? {
+    try target(for: fan, temperature: resolvedSensor(in: sensors)?.celsius)
   }
 
   public var id: UUID = UUID()
@@ -127,16 +127,16 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
       }
     }
   }
-  public func target(for fan: Fan, temperature: Double?, minimumRPM: Double? = nil, fanProtectionEnabled: Bool = false) throws -> Double? {
+  public func target(for fan: Fan, temperature: Double?) throws -> Double? {
     guard fan.minimum.isFinite, fan.maximum.isFinite, fan.minimum >= 0,
       fan.maximum > fan.minimum, fan.maximum <= 20000
     else { throw FanError.invalid(L10n.t("Giới hạn quạt không hợp lệ.")) }
     if mode == .automatic { return nil }
-    let low = try FanRPMPolicy.minimum(for: fan, custom: minimumRPM, protection: fanProtectionEnabled)
+    let low = try FanRPMPolicy.minimum(for: fan)
     switch mode {
     case .automatic: return nil
     case .fixed:
-      guard rpm.isFinite, rpm >= (minimumRPM == nil && !fanProtectionEnabled ? fan.minimum : 0), rpm <= fan.maximum else {
+      guard rpm.isFinite, rpm >= 0, rpm <= fan.maximum else {
         throw FanError.invalid(L10n.f("error.rpmBounds", Int(fan.minimum), Int(fan.maximum)))
       }
       return max(low, rpm)

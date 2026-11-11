@@ -29,14 +29,14 @@ struct FanEditor: View {
   }
   private var validation: String? {
     do {
-      if (store.minimumRPM == nil || store.fanProtectionEnabled), applyAll, draft.mode == .fixed,
+      if applyAll, draft.mode == .fixed,
         (targetFans.map(\.minimum).max() ?? 0) >= (targetFans.map(\.maximum).min() ?? 0)
       {
         return L10n.t("group.noCommon")
       }
       for target in targetFans {
         _ = try draft.target(
-          for: target, sensors: store.sensors, minimumRPM: store.minimumRPM, fanProtectionEnabled: store.fanProtectionEnabled)
+          for: target, sensors: store.sensors)
       }
       return nil
     } catch { return error.localizedDescription }
@@ -192,7 +192,6 @@ struct FanEditor: View {
       }
       clampFixedDraft()
     }
-    .onChange(of: store.minimumRPM) { _, _ in clampFixedDraft() }
     .onChange(of: store.fanProtectionEnabled) { _, _ in clampFixedDraft() }
     .onChange(of: store.presets.map(\.id)) { previous, current in
       if previous.contains(draft.id), !current.contains(draft.id) {

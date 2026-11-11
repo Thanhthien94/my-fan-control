@@ -25,7 +25,7 @@ struct KeepSpinningProtectionTests {
     hw.fans = hw.fans.map { var fan = $0; fan.current = fan.minimum; return fan }
     var time = ContinuousClock.now
     let session = ControlSession(hardware: hw, now: { time })
-    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Fast", mode: .fixed, rpm: 4500), minimumRPM: 0)
+    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Fast", mode: .fixed, rpm: 4500))
     #expect(hw.targets == [0: 1200, 1: 1500])
     for step in 1...7 {
       time = time.advanced(by: .seconds(1))
@@ -39,34 +39,25 @@ struct KeepSpinningProtectionTests {
       FanPreset(name: "Curve", mode: .sensor, sensor: "test")] {
       let hw = KeepSpinningHardware()
       let session = ControlSession(hardware: hw)
-      try session.configureGroup(ids: [0, 1], rule: rule, minimumRPM: 0)
+      try session.configureGroup(ids: [0, 1], rule: rule)
       #expect(hw.targets == [0: 1200, 1: 1500])
       session.tick(leaseAge: 1)
       #expect(hw.targets == [0: 1200, 1: 1500])
     }
   }
-  @Test func disablingRestoresExplicitZeroAndReenablingImmediatelyRestoresFloor() throws {
+  @Test func disablingSlewStillKeepsHardwareFloors() throws {
     let hw = KeepSpinningHardware()
     let session = ControlSession(hardware: hw)
-    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Stop", mode: .fixed, rpm: 0), minimumRPM: 0)
+    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Stop", mode: .fixed, rpm: 0))
     try session.setFanProtection(false)
-    #expect(hw.targets == [0: 0, 1: 0])
-    try session.setFanProtection(true)
     #expect(hw.targets == [0: 1200, 1: 1500])
-  }
-  @Test func explicitHigherFloorWinsAndChangingCustomZeroCannotBypassProtection() throws {
-    let hw = KeepSpinningHardware()
-    let session = ControlSession(hardware: hw)
-    let curve = FanPreset(name: "Curve", mode: .sensor, sensor: "test")
-    try session.configureGroup(ids: [0, 1], rule: curve, minimumRPM: 2000)
-    #expect(hw.targets == [0: 2000, 1: 2000])
-    try session.setMinimumRPM(0)
+    try session.setFanProtection(true)
     #expect(hw.targets == [0: 1200, 1: 1500])
   }
   @Test func failedToggleRetainsPreviousChoiceAndRestoresOwnedFans() throws {
     let hw = KeepSpinningHardware()
     let session = ControlSession(hardware: hw)
-    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Stop", mode: .fixed, rpm: 0), minimumRPM: 0)
+    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Stop", mode: .fixed, rpm: 0))
     hw.failWrites = true
     #expect(throws: (any Error).self) { try session.setFanProtection(false) }
     #expect(session.fanProtectionEnabled)
@@ -75,12 +66,11 @@ struct KeepSpinningProtectionTests {
   @Test func protectedCurveInterpolatesFromHardwareFloorToHardwareCeiling() throws {
     let fan = KeepSpinningHardware().fans[0]
     let curve = FanPreset(name: "Curve", mode: .sensor, sensor: "test", start: 40, full: 80)
-    #expect(try curve.target(for: fan, temperature: 35, minimumRPM: 0, fanProtectionEnabled: true) == 1200)
-    #expect(try curve.target(for: fan, temperature: 60, minimumRPM: 0, fanProtectionEnabled: true) == 3600)
-    #expect(try curve.target(for: fan, temperature: 85, minimumRPM: 0, fanProtectionEnabled: true) == 6000)
-    #expect(try curve.target(for: fan, temperature: 35, minimumRPM: 0, fanProtectionEnabled: false) == 0)
+    #expect(try curve.target(for: fan, temperature: 35) == 1200)
+    #expect(try curve.target(for: fan, temperature: 60) == 3600)
+    #expect(try curve.target(for: fan, temperature: 85) == 6000)
     #expect(try FanPreset(name: "Auto", mode: .automatic).target(for: fan,
-      temperature: nil, minimumRPM: 0, fanProtectionEnabled: true) == nil)
+      temperature: nil) == nil)
   }
   @Test func rawZeroAndClampedDisplayKeepIdentityButRealEditsRemainVisible() {
     let stored = FanPreset(name: "Stop", mode: .fixed, rpm: 0)
@@ -96,7 +86,7 @@ struct KeepSpinningProtectionTests {
   @Test func thermalReturnToAutomaticOverridesKeepSpinningPolicy() throws {
     let hw = KeepSpinningHardware()
     let session = ControlSession(hardware: hw)
-    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Stop", mode: .fixed, rpm: 0), minimumRPM: 0)
+    try session.configureGroup(ids: [0, 1], rule: FanPreset(name: "Stop", mode: .fixed, rpm: 0))
     hw.temperature = 90
     session.tick(leaseAge: 1)
     #expect(session.owned.isEmpty && hw.restores == [0, 1])

@@ -332,23 +332,16 @@
 
 "preset.deleteRestoreFailed" = "Đã giữ preset vì chưa xác nhận được quạt về tự động: %@";
 
-"rpm.minimumTitle" = "RPM tối thiểu toàn app";
-"rpm.customMinimum" = "Dùng RPM tối thiểu tùy chỉnh";
-"rpm.minimumHint" = "Mức lưu áp dụng toàn app cho RPM cố định, đường cong cảm biến và lịch. Khi bật Bảo vệ tuổi thọ quạt, sàn hiệu lực không thấp hơn mức phần cứng. Muốn dùng mức lưu 0, hãy tắt bảo vệ. Firmware vẫn có thể từ chối yêu cầu dừng.";
 "rpm.softStartHint" = "Tăng RPM mục tiêu từ sàn hiệu lực hoặc tốc độ đang chạy, tối đa 500 RPM/giây tới mục tiêu trong trần phần cứng. Giảm RPM và trả về Tự động không bị trì hoãn. Không bảo đảm ngăn cú khởi động đầu của firmware; chưa có đo kiểm tuổi thọ dài hạn.";
-"rpm.saveMinimum" = "Áp dụng RPM tối thiểu";
-"rpm.minimumSaved" = "Đã cập nhật RPM tối thiểu.";
-"rpm.minimumInvalid" = "RPM tối thiểu phải là số hợp lệ từ 0 đến %d.";
-"rpm.sliderHint" = "Cận dưới theo sàn hiệu lực: không thấp hơn sàn phần cứng khi bật Bảo vệ tuổi thọ quạt.";
-"rpm.curveRange" = "Sàn đường cong đang áp dụng: %@.";
+"rpm.sliderHint" = "Thanh kéo theo giới hạn phần cứng. Khi bật bảo vệ, RPM mục tiêu tăng dần từ sàn hoặc tốc độ đang chạy.";
+"rpm.curveRange" = "Sàn đường cong theo phần cứng: %@.";
 
 "protection.title" = "Bảo vệ tuổi thọ quạt";
-"protection.detail" = "Khi app đang điều khiển, giữ quạt quay ít nhất ở sàn RPM phần cứng để giảm các lần dừng/khởi động lại. RPM tối thiểu tùy chỉnh cao hơn vẫn được ưu tiên. Chế độ Tự động do macOS quản lý; lần khởi động đầu có thể vọt RPM do firmware.";
+"protection.detail" = "Dùng sàn RPM phần cứng cho từng quạt và tăng mềm từ sàn hoặc tốc độ đang chạy tới mục tiêu. Chế độ Tự động do macOS quản lý; lần khởi động đầu vẫn có thể vọt RPM do firmware.";
 "protection.enabled" = "Đã bật bảo vệ: dùng sàn RPM phần cứng khi điều khiển.";
-"protection.disabled" = "Đã tắt bảo vệ tuổi thọ quạt; dùng RPM tối thiểu đã lưu. Bảo vệ nhiệt vẫn hoạt động.";
+"protection.disabled" = "Đã tắt tăng tốc mềm. Giới hạn phần cứng và bảo vệ nhiệt vẫn được giữ.";
 "protection.invalid" = "Thiếu trạng thái Bảo vệ tuổi thọ quạt.";
-"rpm.sliderHintUnprotected" = "Cận dưới theo RPM tối thiểu toàn app trong Cài đặt. Bảo vệ tuổi thọ quạt đang tắt.";
+"rpm.sliderHintUnprotected" = "Thanh kéo theo giới hạn phần cứng. Tăng tốc mềm đang tắt.";
 
-"rpm.effectiveFloors" = "Sàn hiệu lực hiện tại: %@.";
 
 "mode.fixedAppliedTargets" = "Đã đặt mục tiêu %@ · “%@”.";

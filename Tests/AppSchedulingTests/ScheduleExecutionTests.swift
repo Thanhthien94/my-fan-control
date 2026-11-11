@@ -7,12 +7,10 @@ import Testing
 actor HardwareFake: HardwareBackend {
   var policies = [Int: FanPreset]()
   var commands = [String]()
-  var requestedMinimums = [Double?]()
   var requestedProtections = [Bool?]()
   var rejectsProtection = false
   func protectionRequests() -> [Bool?] { requestedProtections }
   func rejectProtectionUpdate() { rejectsProtection = true }
-  func minimumRequests() -> [Double?] { requestedMinimums }
   var failFan: Int?
   var failedRestores = 0
   var unconfirmedRestore = false
@@ -53,9 +51,6 @@ actor HardwareFake: HardwareBackend {
     }
     if request.command == "setFanProtection", rejectsProtection {
       throw FanError.helper("Protection update rejected")
-    }
-    if ["configure", "configureGroup", "setMinimumRPM"].contains(request.command) {
-      requestedMinimums.append(request.minimumRPM)
     }
     if request.command == "configureGroup", let ids = request.fanIDs, let rule = request.preset {
       do {

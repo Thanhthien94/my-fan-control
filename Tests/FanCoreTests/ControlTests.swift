@@ -21,7 +21,7 @@ struct ControlTests {
         for: fan, temperature: 60)
     }
     #expect(throws: (any Error).self) {
-      try FanPreset(name: "Bad", mode: .fixed, rpm: 0).target(for: fan, temperature: nil)
+      try FanPreset(name: "Bad", mode: .fixed, rpm: -1).target(for: fan, temperature: nil)
     }
     #expect(throws: (any Error).self) {
       try FanPreset(name: "Bad", mode: .fixed, rpm: .nan).target(for: fan, temperature: nil)

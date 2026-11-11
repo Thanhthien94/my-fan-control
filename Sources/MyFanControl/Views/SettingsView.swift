@@ -38,8 +38,6 @@ struct GeneralSettingsView: View {
         Toggle(L10n.t("Hiển thị cảm biến bằng °F"), isOn: $fahrenheit)
         LabeledContent(L10n.t("Cập nhật"), value: L10n.t("Mỗi 1 giây"))
         Divider()
-        MinimumRPMSettings(store: store)
-        Divider()
         FanProtectionSettings(store: store)
         Divider()
         Picker(L10n.t("settings.menuSensor"), selection: $menuBarSensorID) {
@@ -159,45 +157,6 @@ struct SupportSettingsView: View {
         if let feedback { Text(feedback).font(.callout).textSelection(.enabled) }
       }.padding(16)
     }
-  }
-}
-
-
-private struct MinimumRPMSettings: View {
-  var store: FanStore
-  @State private var custom = false
-  @State private var value = 0.0
-  @State private var feedback: String?
-  private var selection: Double? { custom ? value : nil }
-  var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(L10n.t("rpm.minimumTitle")).font(.headline)
-      Toggle(L10n.t("rpm.customMinimum"), isOn: $custom)
-      if custom {
-        HStack {
-          Text(L10n.t("rpm.minimumTitle"))
-          TextField("RPM", value: $value, format: .number.precision(.fractionLength(0)))
-            .frame(width: 90).textFieldStyle(.roundedBorder)
-          Text("RPM")
-          Stepper("RPM", value: $value, in: 0...store.maximumMinimumRPM, step: 50).labelsHidden()
-        }
-      }
-      if !store.fans.isEmpty {
-        Text(L10n.f("rpm.effectiveFloors", store.fans.map {
-          "\($0.name): \(Int(store.effectiveMinimumRPM(for: $0))) RPM"
-        }.joined(separator: ", "))).font(.caption).foregroundStyle(.secondary)
-      }
-      Text(L10n.t("rpm.minimumHint")).font(.caption).foregroundStyle(.secondary)
-        .fixedSize(horizontal: false, vertical: true)
-      Button(L10n.t("rpm.saveMinimum")) {
-        Task {
-          let saved = await store.setMinimumRPM(selection)
-          feedback = saved ? L10n.t("rpm.minimumSaved") : store.error
-        }
-      }.disabled(store.busy || selection == store.minimumRPM)
-      if let feedback { Text(feedback).font(.caption).textSelection(.enabled) }
-    }.disabled(store.busy)
-      .onAppear { custom = store.minimumRPM != nil; value = store.minimumRPM ?? 0 }
   }
 }
 

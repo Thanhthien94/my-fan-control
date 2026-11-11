@@ -332,23 +332,16 @@
 
 "preset.deleteRestoreFailed" = "Preset kept because automatic control could not be confirmed: %@";
 
-"rpm.minimumTitle" = "App-wide minimum RPM";
-"rpm.customMinimum" = "Use a custom minimum RPM";
-"rpm.minimumHint" = "The saved minimum applies app-wide to fixed RPM, sensor curves and schedules. Fan Longevity Protection raises the effective floor to at least each fan’s hardware minimum. Disable protection to use a saved 0. Firmware may still reject a stop request.";
 "rpm.softStartHint" = "Increase target RPM from the effective floor or current running speed, up to 500 RPM/s toward the requested target within the hardware maximum. Reductions and automatic restoration are immediate. The initial firmware kick is not guaranteed to be prevented; no long-term lifetime measurements are available.";
-"rpm.saveMinimum" = "Apply minimum RPM";
-"rpm.minimumSaved" = "Minimum RPM updated.";
-"rpm.minimumInvalid" = "Minimum RPM must be a finite number from 0 to %d.";
-"rpm.sliderHint" = "The lower bound follows the effective floor: at least the hardware minimum when Fan Longevity Protection is enabled.";
-"rpm.curveRange" = "Effective curve floors: %@.";
+"rpm.sliderHint" = "The slider follows hardware bounds. With protection on, target RPM rises gradually from the floor or current running speed.";
+"rpm.curveRange" = "Hardware curve floors: %@.";
 
 "protection.title" = "Fan Longevity Protection";
-"protection.detail" = "While the app controls the fans, keep them spinning at least at each fan’s hardware minimum to reduce stop/start cycles. A higher custom minimum still takes precedence. Automatic mode is managed by macOS; firmware may still cause the initial startup kick.";
+"protection.detail" = "Use each fan’s hardware minimum and increase targets gradually from that floor or current running RPM. Automatic mode is managed by macOS; firmware can still cause the initial startup kick.";
 "protection.enabled" = "Protection enabled: hardware RPM floors apply during manual control.";
-"protection.disabled" = "Fan Longevity Protection disabled; using the saved RPM minimum. Thermal protection remains active.";
+"protection.disabled" = "Soft increases disabled. Hardware bounds and thermal protection remain active.";
 "protection.invalid" = "Missing Fan Longevity Protection state.";
-"rpm.sliderHintUnprotected" = "Lower bound follows the app-wide minimum in Settings. Fan Longevity Protection is off.";
+"rpm.sliderHintUnprotected" = "The slider follows hardware bounds. Soft increases are off.";
 
-"rpm.effectiveFloors" = "Current effective floors: %@.";
 
 "mode.fixedAppliedTargets" = "Targets set: %@ · “%@”.";

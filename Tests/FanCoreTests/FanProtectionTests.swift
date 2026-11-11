@@ -21,7 +21,7 @@ struct FanProtectionTests {
     let session = ControlSession(hardware: hw, now: { instant })
     let rule = FanPreset(name: "Fast", mode: .fixed, rpm: 4500)
     #expect(session.fanProtectionEnabled)
-    try session.configure(id: 0, rule: rule, minimumRPM: 0)
+    try session.configure(id: 0, rule: rule)
     #expect(hw.targets.last == 1200)
     try session.setFanProtection(false)
     session.tick(leaseAge: 1)
@@ -35,7 +35,7 @@ struct FanProtectionTests {
     let instant = ContinuousClock.now
     let session = ControlSession(hardware: hw, now: { instant })
     try session.setFanProtection(false)
-    try session.configure(id: 0, rule: FanPreset(name: "Fast", mode: .fixed, rpm: 4500), minimumRPM: 0)
+    try session.configure(id: 0, rule: FanPreset(name: "Fast", mode: .fixed, rpm: 4500))
     hw.temperature = 90
     session.tick(leaseAge: 1)
     #expect(hw.restored && session.activeIDs.isEmpty)
