@@ -106,11 +106,15 @@ final class FanKeyController {
       do {
         // Some firmware drops forced mode while target is zero. Write the bounded target
         // immediately after mode, then verify the pair instead of checking in between.
-        try write(key, 1)
+        var modeFailure: Error?
+        do { try write(key, 1) } catch { modeFailure = error }
         try checkOperation()
+        // Firmware may reject mode until a nonzero target is staged. Do not
+        // starve the low target behind repeated mode failures; verify both below.
         try write("F\(fanID)Tg", rpm)
         try checkOperation()
         if try read(key) == 1, abs(try read("F\(fanID)Tg") - rpm) < 2 { return }
+        if let modeFailure { last = modeFailure }
       } catch { last = error }
       if i + 1 < attempts { wait(0.1) }
     }
