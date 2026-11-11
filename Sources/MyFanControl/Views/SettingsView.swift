@@ -182,6 +182,11 @@ private struct MinimumRPMSettings: View {
           Stepper("RPM", value: $value, in: 0...store.maximumMinimumRPM, step: 50).labelsHidden()
         }
       }
+      if !store.fans.isEmpty {
+        Text(L10n.f("rpm.effectiveFloors", store.fans.map {
+          "\($0.name): \(Int(store.effectiveMinimumRPM(for: $0))) RPM"
+        }.joined(separator: ", "))).font(.caption).foregroundStyle(.secondary)
+      }
       Text(L10n.t("rpm.minimumHint")).font(.caption).foregroundStyle(.secondary)
         .fixedSize(horizontal: false, vertical: true)
       Button(L10n.t("rpm.saveMinimum")) {

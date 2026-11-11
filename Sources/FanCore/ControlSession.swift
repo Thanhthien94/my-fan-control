@@ -20,10 +20,32 @@ public final class ControlSession {
   private var minimums = [Int: Double]()
   private var startup = FanStartupRamp()
   public private(set) var fanProtectionEnabled = true
-  public func setFanProtection(_ enabled: Bool) {
+  public func setFanProtection(_ enabled: Bool) throws {
     guard enabled != fanProtectionEnabled else { return }
+    let previous = fanProtectionEnabled
     fanProtectionEnabled = enabled
     startup.reset()
+    guard !rules.isEmpty else { return }
+    do {
+      hardware.beginControlOperation()
+      let snapshot = try hardware.snapshot()
+      guard ControlSafety.permits(leaseAge: 0, sensors: snapshot.sensors) else {
+        throw FanError.invalid(L10n.t("Đã về tự động: nhiệt độ cao, mất cảm biến hoặc hết phiên."))
+      }
+      let targets = try rules.map { id, rule -> (Fan, Double) in
+        guard let fan = snapshot.fans.first(where: { $0.id == id }),
+          let rpm = try rule.target(for: fan, sensors: snapshot.sensors,
+            minimumRPM: minimums[id], fanProtectionEnabled: enabled) else {
+          throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
+        }
+        return (fan, rpm)
+      }
+      for (fan, rpm) in targets { try writeTarget(fan: fan, rpm: rpm, minimumRPM: minimums[fan.id]) }
+    } catch {
+      fanProtectionEnabled = previous
+      restoreAll()
+      throw error
+    }
   }
   private let now: () -> ContinuousClock.Instant
   public private(set) var owned = Set<Int>()
@@ -34,10 +56,11 @@ public final class ControlSession {
     self.hardware = hardware
     self.now = now
   }
-  private func writeTarget(fan: Fan, rpm: Double, startingRPM: Double? = nil) throws {
+  private func writeTarget(fan: Fan, rpm: Double, startingRPM: Double? = nil, minimumRPM: Double? = nil) throws {
     var startupFan = fan
     if let startingRPM { startupFan.current = min(fan.current, startingRPM) }
-    let target = fanProtectionEnabled ? startup.target(for: startupFan, requested: rpm, at: now()) : rpm
+    let floor = try FanRPMPolicy.minimum(for: fan, custom: minimumRPM, protection: fanProtectionEnabled)
+    let target = fanProtectionEnabled ? startup.target(for: startupFan, requested: rpm, at: now(), minimumRPM: floor) : rpm
     try hardware.setTarget(fan: fan, rpm: target)
     if fanProtectionEnabled { startup.confirmWrite(for: fan.id, at: now()) }
   }
@@ -54,7 +77,7 @@ public final class ControlSession {
         throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
       }
       let floor = value ?? (rule.mode == .fixed && rule.rpm < fan.minimum ? fan.minimum : nil)
-      guard let rpm = try rule.target(for: fan, sensors: snapshot.sensors, minimumRPM: floor)
+      guard let rpm = try rule.target(for: fan, sensors: snapshot.sensors, minimumRPM: floor, fanProtectionEnabled: fanProtectionEnabled)
       else { throw FanError.invalid(L10n.t("Không tìm thấy quạt.")) }
       return (fan, rpm)
     }
@@ -62,7 +85,7 @@ public final class ControlSession {
       guard ControlSafety.permits(leaseAge: 0, sensors: snapshot.sensors) else {
         throw FanError.invalid(L10n.t("Đã về tự động: nhiệt độ cao, mất cảm biến hoặc hết phiên."))
       }
-      for (fan, rpm) in targets { try writeTarget(fan: fan, rpm: rpm) }
+      for (fan, rpm) in targets { try writeTarget(fan: fan, rpm: rpm, minimumRPM: value) }
       for (fan, _) in targets {
         minimums[fan.id] = value ?? (rules[fan.id]?.mode == .fixed && (rules[fan.id]?.rpm ?? 0) < fan.minimum ? fan.minimum : nil)
       }
@@ -116,13 +139,13 @@ public final class ControlSession {
       let targets = try rules.map { id, rule -> (Fan, Double) in
         guard let fan = snapshot.fans.first(where: { $0.id == id }),
           let rpm = try rule.target(
-            for: fan, sensors: snapshot.sensors, minimumRPM: minimums[id])
+            for: fan, sensors: snapshot.sensors, minimumRPM: minimums[id], fanProtectionEnabled: fanProtectionEnabled)
         else {
           throw FanError.invalid(L10n.t("Cảm biến hoặc quạt không còn khả dụng."))
         }
         return (fan, rpm)
       }
-      for (fan, rpm) in targets { try writeTarget(fan: fan, rpm: rpm) }
+      for (fan, rpm) in targets { try writeTarget(fan: fan, rpm: rpm, minimumRPM: minimums[fan.id]) }
     } catch {
       notice = error.localizedDescription
       restoreAll()
@@ -139,14 +162,14 @@ public final class ControlSession {
     guard let fan = snapshot.fans.first(where: { $0.id == id }) else {
       throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
     }
-    if let rpm = try rule.target(for: fan, sensors: snapshot.sensors, minimumRPM: minimumRPM) {
+    if let rpm = try rule.target(for: fan, sensors: snapshot.sensors, minimumRPM: minimumRPM, fanProtectionEnabled: fanProtectionEnabled) {
       guard ControlSafety.permits(leaseAge: 0, sensors: snapshot.sensors) else {
         throw FanError.invalid(
           L10n.t("Cần cảm biến nhiệt hợp lệ dưới 90°C để điều khiển thủ công."))
       }
       owned.insert(id)
       do {
-        try writeTarget(fan: fan, rpm: rpm, startingRPM: startingRPM)
+        try writeTarget(fan: fan, rpm: rpm, startingRPM: startingRPM, minimumRPM: minimumRPM)
         rules[id] = rule
         minimums[id] = minimumRPM
         notice = nil
@@ -180,7 +203,7 @@ public final class ControlSession {
         throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
       }
       _ = try rule.target(
-        for: fan, sensors: snapshot.sensors, minimumRPM: minimumRPM)
+        for: fan, sensors: snapshot.sensors, minimumRPM: minimumRPM, fanProtectionEnabled: fanProtectionEnabled)
     }
     var touched = Set<Int>()
     do {

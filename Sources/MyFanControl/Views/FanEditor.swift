@@ -13,27 +13,30 @@ struct FanEditor: View {
   }
   private var targetFans: [Fan] { applyAll ? store.fans : [fan] }
   private var saved: FanPreset? { store.presets.first(where: { $0.id == draft.id }) }
-  private var unchanged: Bool { saved == draft }
+  private var unchanged: Bool {
+    guard let saved else { return false }
+    return targetFans.allSatisfy { draft.sameControl(as: saved, atMinimumRPM: store.effectiveMinimumRPM(for: $0)) }
+  }
   private var draftStatus: FanEditorDraftStatus {
-    FanEditorDraftStatus.resolve(draft: draft, saved: saved, applied: applied,
+    FanEditorDraftStatus.resolve(draft: draft, saved: unchanged ? draft : saved, applied: applied,
       busy: store.busy, authorizing: store.authorizing,
       restoring: targetFans.contains(where: { store.restoring.contains($0.id) }), valid: validation == nil)
   }
   private var limits: ClosedRange<Double> {
-    let low = store.minimumRPM ?? (targetFans.map(\.minimum).max() ?? fan.minimum)
+    let low = targetFans.map { store.effectiveMinimumRPM(for: $0) }.max() ?? fan.minimum
     let high = targetFans.map(\.maximum).min() ?? fan.maximum
     return min(low, high)...max(low, high)
   }
   private var validation: String? {
     do {
-      if store.minimumRPM == nil, applyAll, draft.mode == .fixed,
+      if (store.minimumRPM == nil || store.fanProtectionEnabled), applyAll, draft.mode == .fixed,
         (targetFans.map(\.minimum).max() ?? 0) >= (targetFans.map(\.maximum).min() ?? 0)
       {
         return L10n.t("group.noCommon")
       }
       for target in targetFans {
         _ = try draft.target(
-          for: target, sensors: store.sensors, minimumRPM: store.minimumRPM)
+          for: target, sensors: store.sensors, minimumRPM: store.minimumRPM, fanProtectionEnabled: store.fanProtectionEnabled)
       }
       return nil
     } catch { return error.localizedDescription }
@@ -43,7 +46,7 @@ struct FanEditor: View {
     if draft.mode == .automatic {
       return targetFans.allSatisfy { !$0.manual && !store.controlled.contains($0.id) && !store.restoring.contains($0.id) }
     }
-    return targetFans.allSatisfy { store.active[$0.id] == draft && store.controlled.contains($0.id) && !store.restoring.contains($0.id) }
+    return targetFans.allSatisfy { store.active[$0.id]?.sameControl(as: draft, atMinimumRPM: store.effectiveMinimumRPM(for: $0)) == true && store.controlled.contains($0.id) && !store.restoring.contains($0.id) }
   }
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -123,7 +126,9 @@ struct FanEditor: View {
               TextField("°C", value: $draft.full, format: .number).frame(width: 50)
               Text("°C")
             }
-            Text(L10n.f("rpm.curveRange", Int(limits.lowerBound)))
+            Text(L10n.f("rpm.curveRange", targetFans.map {
+              "\($0.name): \(Int(store.effectiveMinimumRPM(for: $0))) RPM"
+            }.joined(separator: ", ")))
               .font(.caption).foregroundStyle(.secondary)
             Text(L10n.t("Tăng tuyến tính từ RPM tối thiểu đến tối đa giữa hai ngưỡng.")).font(
               .caption
@@ -188,6 +193,7 @@ struct FanEditor: View {
       clampFixedDraft()
     }
     .onChange(of: store.minimumRPM) { _, _ in clampFixedDraft() }
+    .onChange(of: store.fanProtectionEnabled) { _, _ in clampFixedDraft() }
     .onChange(of: store.presets.map(\.id)) { previous, current in
       if previous.contains(draft.id), !current.contains(draft.id) {
         draft = FanPreset(name: L10n.t("Tự động"), mode: .automatic,

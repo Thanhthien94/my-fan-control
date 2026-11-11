@@ -35,7 +35,10 @@ struct SavedPresetList: View {
                       Text(preset.summary).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
-                    if fanIDs.allSatisfy({ store.active[$0] == preset }) {
+                    if fanIDs.allSatisfy({ id in
+                      guard let fan = store.fans.first(where: { $0.id == id }) else { return false }
+                      return store.active[id]?.sameControl(as: preset, atMinimumRPM: store.effectiveMinimumRPM(for: fan)) == true
+                    }) {
                       Text(L10n.t("preset.inUse")).font(.caption).foregroundStyle(.green)
                     }
                   }.padding(9).contentShape(Rectangle())

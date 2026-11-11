@@ -334,17 +334,21 @@
 
 "rpm.minimumTitle" = "RPM tối thiểu toàn app";
 "rpm.customMinimum" = "Dùng RPM tối thiểu tùy chỉnh";
-"rpm.minimumHint" = "Áp dụng cho RPM cố định và đường cong cảm biến, gồm preset và lịch; đồng bộ cận dưới thanh kéo RPM. Tắt để dùng mức tối thiểu do từng quạt báo. 0 cho phép yêu cầu dừng; firmware có thể từ chối hoặc vẫn giữ quạt quay. Chế độ Tự động do macOS quản lý.";
-"rpm.softStartHint" = "Khởi động mềm: tăng tối đa 200 RPM/giây dưới 1000 RPM, sau đó 500 RPM/giây. RPM thực tế phụ thuộc firmware. Bảo vệ nhiệt luôn được ưu tiên.";
+"rpm.minimumHint" = "Mức lưu áp dụng toàn app cho RPM cố định, đường cong cảm biến và lịch. Khi bật Bảo vệ tuổi thọ quạt, sàn hiệu lực không thấp hơn mức phần cứng. Muốn dùng mức lưu 0, hãy tắt bảo vệ. Firmware vẫn có thể từ chối yêu cầu dừng.";
+"rpm.softStartHint" = "Tăng RPM mục tiêu từ sàn hiệu lực hoặc tốc độ đang chạy, tối đa 500 RPM/giây tới mục tiêu trong trần phần cứng. Giảm RPM và trả về Tự động không bị trì hoãn. Không bảo đảm ngăn cú khởi động đầu của firmware; chưa có đo kiểm tuổi thọ dài hạn.";
 "rpm.saveMinimum" = "Áp dụng RPM tối thiểu";
 "rpm.minimumSaved" = "Đã cập nhật RPM tối thiểu.";
 "rpm.minimumInvalid" = "RPM tối thiểu phải là số hợp lệ từ 0 đến %d.";
-"rpm.sliderHint" = "Cận dưới theo RPM tối thiểu toàn app trong Cài đặt. Khởi động từ tốc độ thấp sẽ tăng dần.";
-"rpm.curveRange" = "Đường cong bắt đầu từ %d RPM (mức tối thiểu toàn app hoặc mặc định phần cứng).";
+"rpm.sliderHint" = "Cận dưới theo sàn hiệu lực: không thấp hơn sàn phần cứng khi bật Bảo vệ tuổi thọ quạt.";
+"rpm.curveRange" = "Sàn đường cong đang áp dụng: %@.";
 
 "protection.title" = "Bảo vệ tuổi thọ quạt";
-"protection.detail" = "Tăng tốc mềm khi quạt khởi động từ 0 hoặc dưới 1000 RPM, tránh nhảy lệnh lên mức cao ngay. Áp dụng toàn app cho điều khiển thủ công và lịch. Mặc định bật; chưa có đo kiểm dài hạn về tuổi thọ quạt.";
-"protection.enabled" = "Đã bật Bảo vệ tuổi thọ quạt.";
-"protection.disabled" = "Đã tắt tăng tốc mềm. Bảo vệ nhiệt vẫn hoạt động.";
+"protection.detail" = "Khi app đang điều khiển, giữ quạt quay ít nhất ở sàn RPM phần cứng để giảm các lần dừng/khởi động lại. RPM tối thiểu tùy chỉnh cao hơn vẫn được ưu tiên. Chế độ Tự động do macOS quản lý; lần khởi động đầu có thể vọt RPM do firmware.";
+"protection.enabled" = "Đã bật bảo vệ: dùng sàn RPM phần cứng khi điều khiển.";
+"protection.disabled" = "Đã tắt bảo vệ tuổi thọ quạt; dùng RPM tối thiểu đã lưu. Bảo vệ nhiệt vẫn hoạt động.";
 "protection.invalid" = "Thiếu trạng thái Bảo vệ tuổi thọ quạt.";
 "rpm.sliderHintUnprotected" = "Cận dưới theo RPM tối thiểu toàn app trong Cài đặt. Bảo vệ tuổi thọ quạt đang tắt.";
+
+"rpm.effectiveFloors" = "Sàn hiệu lực hiện tại: %@.";
+
+"mode.fixedAppliedTargets" = "Đã đặt mục tiêu %@ · “%@”.";

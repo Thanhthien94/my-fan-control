@@ -334,17 +334,21 @@
 
 "rpm.minimumTitle" = "App-wide minimum RPM";
 "rpm.customMinimum" = "Use a custom minimum RPM";
-"rpm.minimumHint" = "Applies to fixed RPM and sensor curves, including presets and schedules; sets the RPM slider’s lower bound. Off uses each fan’s reported minimum. 0 allows a stop request; firmware may reject it or keep the fan spinning. Automatic mode remains managed by macOS.";
-"rpm.softStartHint" = "Soft startup: increases by up to 200 RPM/s below 1000 RPM, then 500 RPM/s. Actual RPM depends on firmware. Thermal protection always takes priority.";
+"rpm.minimumHint" = "The saved minimum applies app-wide to fixed RPM, sensor curves and schedules. Fan Longevity Protection raises the effective floor to at least each fan’s hardware minimum. Disable protection to use a saved 0. Firmware may still reject a stop request.";
+"rpm.softStartHint" = "Increase target RPM from the effective floor or current running speed, up to 500 RPM/s toward the requested target within the hardware maximum. Reductions and automatic restoration are immediate. The initial firmware kick is not guaranteed to be prevented; no long-term lifetime measurements are available.";
 "rpm.saveMinimum" = "Apply minimum RPM";
 "rpm.minimumSaved" = "Minimum RPM updated.";
 "rpm.minimumInvalid" = "Minimum RPM must be a finite number from 0 to %d.";
-"rpm.sliderHint" = "Lower bound follows the app-wide minimum in Settings. Low-speed startup increases gradually.";
-"rpm.curveRange" = "Curve starts at %d RPM (app-wide minimum or hardware default).";
+"rpm.sliderHint" = "The lower bound follows the effective floor: at least the hardware minimum when Fan Longevity Protection is enabled.";
+"rpm.curveRange" = "Effective curve floors: %@.";
 
 "protection.title" = "Fan Longevity Protection";
-"protection.detail" = "Softens startup from 0 or below 1000 RPM to avoid an immediate jump to a high target. Applies app-wide to manual policies and schedules. Enabled by default; no long-term fan-lifetime measurements are available.";
-"protection.enabled" = "Fan Longevity Protection enabled.";
-"protection.disabled" = "Soft startup disabled. Thermal protection remains active.";
+"protection.detail" = "While the app controls the fans, keep them spinning at least at each fan’s hardware minimum to reduce stop/start cycles. A higher custom minimum still takes precedence. Automatic mode is managed by macOS; firmware may still cause the initial startup kick.";
+"protection.enabled" = "Protection enabled: hardware RPM floors apply during manual control.";
+"protection.disabled" = "Fan Longevity Protection disabled; using the saved RPM minimum. Thermal protection remains active.";
 "protection.invalid" = "Missing Fan Longevity Protection state.";
 "rpm.sliderHintUnprotected" = "Lower bound follows the app-wide minimum in Settings. Fan Longevity Protection is off.";
+
+"rpm.effectiveFloors" = "Current effective floors: %@.";
+
+"mode.fixedAppliedTargets" = "Targets set: %@ · “%@”.";

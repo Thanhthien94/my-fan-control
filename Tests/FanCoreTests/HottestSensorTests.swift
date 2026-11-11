@@ -36,6 +36,7 @@ struct HottestSensorTests {
   @Test func eachHelperSampleCanSwitchToANewHottestSensor() throws {
     let hw = HottestHardware()
     let session = ControlSession(hardware: hw)
+    try session.setFanProtection(false)
     try session.configure(id: 0, rule: rule)
     #expect(hw.writes[0] == 3500)
     hw.sensors[1].celsius = 70
@@ -50,6 +51,7 @@ struct HottestSensorTests {
   @Test func groupUsesHottestSampleWithEachFansOwnLimits() throws {
     let hw = HottestHardware()
     let session = ControlSession(hardware: hw)
+    try session.setFanProtection(false)
     try session.configureGroup(ids: [0, 1], rule: rule)
     #expect(hw.writes[0] == 3500 && hw.writes[1] == 3500)
     hw.sensors[1].celsius = 80
@@ -59,6 +61,7 @@ struct HottestSensorTests {
   @Test func disappearanceOfPreviousWinnerSelectsRemainingFreshSensor() throws {
     let hw = HottestHardware()
     let session = ControlSession(hardware: hw)
+    try session.setFanProtection(false)
     try session.configure(id: 0, rule: rule)
     hw.sensors.removeFirst()
     session.tick(leaseAge: 1)
@@ -68,6 +71,7 @@ struct HottestSensorTests {
     for fault in 0..<4 {
       let hw = HottestHardware()
       let session = ControlSession(hardware: hw)
+    try session.setFanProtection(false)
       try session.configureGroup(ids: [0, 1], rule: rule)
       if fault == 0 { hw.sensors = [] }
       if fault == 1 { hw.sensors[0].celsius = .nan }
@@ -84,6 +88,7 @@ struct HottestSensorTests {
     let decoded = try JSONDecoder().decode(FanPreset.self, from: JSONEncoder().encode(pinned))
     try decoded.validateDefinition()
     let session = ControlSession(hardware: hw)
+    try session.setFanProtection(false)
     try session.configure(id: 0, rule: decoded)
     #expect(hw.writes[0] == 2250)
     hw.sensors.removeLast()

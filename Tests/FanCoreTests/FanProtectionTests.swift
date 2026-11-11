@@ -17,7 +17,8 @@ private final class ProtectionHardware: FanHardware {
 struct FanProtectionTests {
   @Test func enabledByDefaultAndSwitchingOffOnUsesTheChosenBehavior() throws {
     let hw = ProtectionHardware()
-    let session = ControlSession(hardware: hw)
+    let instant = ContinuousClock.now
+    let session = ControlSession(hardware: hw, now: { instant })
     let rule = FanPreset(name: "Fast", mode: .fixed, rpm: 4500)
     #expect(session.fanProtectionEnabled)
     try session.configure(id: 0, rule: rule, minimumRPM: 0)
@@ -31,7 +32,8 @@ struct FanProtectionTests {
   }
   @Test func turningProtectionOffNeverTurnsThermalProtectionOff() throws {
     let hw = ProtectionHardware()
-    let session = ControlSession(hardware: hw)
+    let instant = ContinuousClock.now
+    let session = ControlSession(hardware: hw, now: { instant })
     try session.setFanProtection(false)
     try session.configure(id: 0, rule: FanPreset(name: "Fast", mode: .fixed, rpm: 4500), minimumRPM: 0)
     hw.temperature = 90

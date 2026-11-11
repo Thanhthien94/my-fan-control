@@ -78,7 +78,7 @@ final class HelperServer {
         throw FanError.invalid(L10n.t("Thiếu quạt hoặc preset."))
       }
       if rule.mode != .automatic, let enabled = request.fanProtectionEnabled {
-        session.setFanProtection(enabled)
+        try session.setFanProtection(enabled)
       }
       try session.configure(id: id, rule: rule, minimumRPM: request.minimumRPM)
     case "configureGroup":
@@ -86,14 +86,14 @@ final class HelperServer {
         throw FanError.invalid(L10n.t("group.invalid"))
       }
       if rule.mode != .automatic, let enabled = request.fanProtectionEnabled {
-        session.setFanProtection(enabled)
+        try session.setFanProtection(enabled)
       }
       try session.configureGroup(ids: ids, rule: rule, minimumRPM: request.minimumRPM)
     case "setFanProtection":
       guard let enabled = request.fanProtectionEnabled else {
         throw FanError.invalid(L10n.t("protection.invalid"))
       }
-      session.setFanProtection(enabled)
+      try session.setFanProtection(enabled)
     case "setMinimumRPM":
       try session.setMinimumRPM(request.minimumRPM)
     case "automatic":

@@ -72,6 +72,16 @@ struct KeepSpinningProtectionTests {
     #expect(session.fanProtectionEnabled)
     #expect(session.owned.isEmpty && hw.restores == [0, 1])
   }
+  @Test func protectedCurveInterpolatesFromHardwareFloorToHardwareCeiling() throws {
+    let fan = KeepSpinningHardware().fans[0]
+    let curve = FanPreset(name: "Curve", mode: .sensor, sensor: "test", start: 40, full: 80)
+    #expect(try curve.target(for: fan, temperature: 35, minimumRPM: 0, fanProtectionEnabled: true) == 1200)
+    #expect(try curve.target(for: fan, temperature: 60, minimumRPM: 0, fanProtectionEnabled: true) == 3600)
+    #expect(try curve.target(for: fan, temperature: 85, minimumRPM: 0, fanProtectionEnabled: true) == 6000)
+    #expect(try curve.target(for: fan, temperature: 35, minimumRPM: 0, fanProtectionEnabled: false) == 0)
+    #expect(try FanPreset(name: "Auto", mode: .automatic).target(for: fan,
+      temperature: nil, minimumRPM: 0, fanProtectionEnabled: true) == nil)
+  }
   @Test func rawZeroAndClampedDisplayKeepIdentityButRealEditsRemainVisible() {
     let stored = FanPreset(name: "Stop", mode: .fixed, rpm: 0)
     var displayed = stored

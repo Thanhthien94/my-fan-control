@@ -26,6 +26,9 @@ struct TemperaturePoint: Identifiable {
   private var pendingPresetRestorations = [UUID: Set<Int>]()
   private(set) var minimumRPM: Double?
   private(set) var fanProtectionEnabled = true
+  func effectiveMinimumRPM(for fan: Fan) -> Double {
+    (try? FanRPMPolicy.minimum(for: fan, custom: minimumRPM, protection: fanProtectionEnabled)) ?? fan.minimum
+  }
   var maximumMinimumRPM: Double { fans.map(\.maximum).min() ?? 20000 }
   var presets: [FanPreset]
   var history = [TemperaturePoint]()
@@ -55,7 +58,10 @@ struct TemperaturePoint: Identifiable {
     operationMessage = nil
     do {
       if helperEnabled {
-        _ = try await hardware.send(HelperRequest("setFanProtection", fanProtectionEnabled: enabled))
+        let result = try await hardware.send(HelperRequest("setFanProtection", fanProtectionEnabled: enabled))
+        controlled = Set(result.controlled)
+        restoring = Set(result.restoring ?? [])
+        helperMessage = result.message
       } else if !active.isEmpty || !controlled.isEmpty || !restoring.isEmpty {
         throw FanError.helper(L10n.t("Chưa bật quyền điều khiển quạt."))
       }
@@ -65,7 +71,9 @@ struct TemperaturePoint: Identifiable {
       showOperation(L10n.t(enabled ? "protection.enabled" : "protection.disabled"))
       return true
     } catch {
-      self.error = error.localizedDescription
+      let message = error.localizedDescription
+      if helperEnabled { await refresh() }
+      self.error = message
       return false
     }
   }
@@ -291,7 +299,7 @@ struct TemperaturePoint: Identifiable {
     do {
       for fan in snapshot.fans {
         _ = try rule.target(
-          for: fan, sensors: snapshot.sensors, minimumRPM: minimumRPM)
+          for: fan, sensors: snapshot.sensors, minimumRPM: minimumRPM, fanProtectionEnabled: fanProtectionEnabled)
       }
       let result = try await hardware.send(
         HelperRequest("configureGroup", fanIDs: snapshot.fans.map(\.id), preset: rule, minimumRPM: minimumRPM, fanProtectionEnabled: fanProtectionEnabled))
@@ -393,7 +401,7 @@ struct TemperaturePoint: Identifiable {
           throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
         }
         _ = try rule.target(
-          for: fan, sensors: reading.sensors, minimumRPM: minimumRPM)
+          for: fan, sensors: reading.sensors, minimumRPM: minimumRPM, fanProtectionEnabled: fanProtectionEnabled)
       }
       if rule.mode == .automatic, !helperEnabled,
         reading.fans.filter({ fanIDs.contains($0.id) }).allSatisfy({ !$0.manual })
@@ -432,7 +440,11 @@ struct TemperaturePoint: Identifiable {
     let message: String
     switch rule.mode {
     case .automatic: message = L10n.t("preset.alreadyAuto")
-    case .fixed: message = L10n.f("mode.fixedApplied", scope, Int(max(rule.rpm, minimumRPM ?? 0)), rule.name)
+    case .fixed:
+      let targets = fans.filter { fanIDs.contains($0.id) }.map {
+        "\($0.name): \(Int(max(rule.rpm, effectiveMinimumRPM(for: $0)))) RPM"
+      }.joined(separator: ", ")
+      message = L10n.f("mode.fixedAppliedTargets", targets, rule.name)
     case .sensor: message = L10n.f("mode.sensorApplied", rule.sensorTitle, scope, rule.name)
     }
     showOperation(message, expecting: Dictionary(uniqueKeysWithValues: fanIDs.map { ($0, rule) }))
