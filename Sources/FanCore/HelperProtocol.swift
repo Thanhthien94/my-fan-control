@@ -22,7 +22,7 @@ public struct HelperRequest: Codable {
   }
 }
 public struct HelperResponse: Codable {
-  public static let currentProtocolVersion = 9
+  public static let currentProtocolVersion = 10
   public var ok: Bool
   public var message: String?
   public var controlled: [Int]

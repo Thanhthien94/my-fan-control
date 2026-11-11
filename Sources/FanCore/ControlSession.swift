@@ -34,9 +34,12 @@ public final class ControlSession {
     self.hardware = hardware
     self.now = now
   }
-  private func writeTarget(fan: Fan, rpm: Double) throws {
-    let target = fanProtectionEnabled ? startup.target(for: fan, requested: rpm, at: now()) : rpm
+  private func writeTarget(fan: Fan, rpm: Double, startingRPM: Double? = nil) throws {
+    var startupFan = fan
+    if let startingRPM { startupFan.current = min(fan.current, startingRPM) }
+    let target = fanProtectionEnabled ? startup.target(for: startupFan, requested: rpm, at: now()) : rpm
     try hardware.setTarget(fan: fan, rpm: target)
+    if fanProtectionEnabled { startup.confirmWrite(for: fan.id, at: now()) }
   }
   /// Change the global floor for currently active rules without changing their saved definitions.
   public func setMinimumRPM(_ value: Double?) throws {
@@ -129,7 +132,7 @@ public final class ControlSession {
     hardware.beginControlOperation()
     try configureWithinOperation(id: id, rule: rule, minimumRPM: minimumRPM)
   }
-  private func configureWithinOperation(id: Int, rule: FanPreset, minimumRPM: Double?) throws {
+  private func configureWithinOperation(id: Int, rule: FanPreset, minimumRPM: Double?, startingRPM: Double? = nil) throws {
     guard (0..<10).contains(id) else { throw FanError.invalid(L10n.t("Fan ID không hợp lệ.")) }
     // Read afresh at the privilege boundary; a cached snapshot cannot authorize writes.
     let snapshot = try hardware.snapshot()
@@ -143,7 +146,7 @@ public final class ControlSession {
       }
       owned.insert(id)
       do {
-        try writeTarget(fan: fan, rpm: rpm)
+        try writeTarget(fan: fan, rpm: rpm, startingRPM: startingRPM)
         rules[id] = rule
         minimums[id] = minimumRPM
         notice = nil
@@ -183,7 +186,11 @@ public final class ControlSession {
     do {
       for id in ids.sorted() {
         touched.insert(id)
-        try configureWithinOperation(id: id, rule: rule, minimumRPM: minimumRPM)
+        // Opening Ftst for the first fan may spin another fan before its turn.
+        // Preserve only its startup RPM baseline; target bounds and thermal safety
+        // still use the fresh snapshot inside configureWithinOperation.
+        try configureWithinOperation(id: id, rule: rule, minimumRPM: minimumRPM,
+          startingRPM: snapshot.fans.first(where: { $0.id == id })?.current)
       }
     } catch {
       // Physical writes are sequential, so failure returns the touched group to automatic.

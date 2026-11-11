@@ -7,6 +7,10 @@ struct FanStartupRamp {
   mutating func reset(_ id: Int? = nil) {
     if let id { steps.removeValue(forKey: id) } else { steps.removeAll() }
   }
+  /// Handshake time before a confirmed write must not count as acceleration time.
+  mutating func confirmWrite(for id: Int, at time: ContinuousClock.Instant) {
+    steps[id]?.time = time
+  }
   mutating func target(for fan: Fan, requested: Double, at time: ContinuousClock.Instant) -> Double {
     guard requested > 0 else { reset(fan.id); return requested }
     guard let previous = steps[fan.id] else {
