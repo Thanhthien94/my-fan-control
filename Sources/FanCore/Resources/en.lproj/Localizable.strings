@@ -323,3 +323,7 @@
 "fan.short.number" = "F%d";
 "settings.menuPreview" = "Preview";
 "menu.snapshotHint" = "Readings when menu opened";
+
+"sensor.hottest" = "Hottest sensor (automatic selection)";
+"sensor.hottestHint" = "Uses the highest valid temperature across all readable sensors, including unidentified SMC keys. Reselects on every fresh sample (normally once a second).";
+"sensor.hottestCurrent" = "Hottest in latest sample: %@ · %@";

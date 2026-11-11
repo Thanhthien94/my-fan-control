@@ -90,6 +90,17 @@ struct HottestSensorTests {
     session.tick(leaseAge: 1)
     #expect(hw.restores == [0])
   }
+  @Test func resolverRejectsInvalidReadingsAndBreaksTiesStably() {
+    let valid = Sensor(id: "Tp01", name: "CPU", celsius: 60)
+    let tied = Sensor(id: "Tg01", name: "GPU", celsius: 60)
+    let invalid = [Double.nan, .infinity, -1, 0, 130].enumerated().map {
+      Sensor(id: "bad\($0.offset)", name: "Invalid", celsius: $0.element)
+    }
+    #expect(rule.resolvedSensor(in: invalid + [valid]) == valid)
+    #expect(rule.resolvedSensor(in: invalid) == nil)
+    #expect(rule.resolvedSensor(in: [valid, tied])?.id == "Tg01")
+    #expect(rule.resolvedSensor(in: [tied, valid])?.id == "Tg01")
+  }
   @Test func arbitrarySelectorsAndEmptySelectionRemainInvalid() {
     for value in ["", "auto:unknown", "auto:hottest "] {
       var bad = rule

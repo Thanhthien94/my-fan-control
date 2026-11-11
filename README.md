@@ -9,6 +9,7 @@ A free, open-source, native macOS utility for temperature monitoring and fan con
 ## Features
 
 - Live fan RPM and hardware minimum/maximum, refreshed every second.
+- Sensor curves can follow **Hottest sensor (automatic selection)** on every fresh sample (normally 1 Hz), including unidentified readable channels, or remain pinned to one sensor. The latest winner is shown live; presets and schedules retain the dynamic choice.
 - Searchable temperature sensors; the control picker prioritizes identified CPU/GPU/component groups and offers unknown keys separately without discarding the selected sensor.
 - Chip-aware component labels and explanations, with community source links and an option to reveal unidentified keys. See [what the sensors measure](docs/sensors.md).
 - Automatic control, bounded fixed RPM, and a linear temperature-based fan curve per fan.

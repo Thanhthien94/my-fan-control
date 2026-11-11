@@ -7,6 +7,7 @@ struct FanEditor: View {
   @State private var draft = FanPreset(name: "", mode: .automatic)
   @State private var applyAll = false
   @State private var showUnknownSensors = false
+  @AppStorage("fahrenheit") private var fahrenheit = false
   private var sensorGroups: [SensorPickerGroup] {
     SensorPickerGroup.make(store.sensors, selectedID: draft.sensor, includeUnknown: showUnknownSensors)
   }
@@ -32,7 +33,7 @@ struct FanEditor: View {
       }
       for target in targetFans {
         _ = try draft.target(
-          for: target, temperature: store.sensors.first(where: { $0.id == draft.sensor })?.celsius)
+          for: target, sensors: store.sensors)
       }
       return nil
     } catch { return error.localizedDescription }
@@ -85,6 +86,7 @@ struct FanEditor: View {
           case .sensor:
             Picker(L10n.t("Cảm biến"), selection: $draft.sensor) {
               Text(L10n.t("Chọn cảm biến")).tag("")
+              Text(L10n.t("sensor.hottest")).tag(FanPreset.hottestSensorID)
               ForEach(sensorGroups) { group in
                 Section(group.component.title) {
                   ForEach(group.sensors) { sensor in
@@ -92,11 +94,22 @@ struct FanEditor: View {
                   }
                 }
               }
-              if !draft.sensor.isEmpty, !store.sensors.contains(where: { $0.id == draft.sensor }) {
+              if !draft.sensor.isEmpty, !draft.followsHottestSensor, !store.sensors.contains(where: { $0.id == draft.sensor }) {
                 Text(L10n.f("settings.sensorUnavailable", draft.sensor)).tag(draft.sensor)
               }
             }
-            Toggle(L10n.t("sensors.showUnknown"), isOn: $showUnknownSensors).font(.caption)
+            if draft.followsHottestSensor {
+              Text(L10n.t("sensor.hottestHint")).font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+              if let sensor = draft.resolvedSensor(in: store.sensors) {
+                let unit: TemperatureUnit = fahrenheit ? .fahrenheit : .celsius
+                Text(L10n.f("sensor.hottestCurrent", SensorPickerGroup.label(sensor), unit.text(sensor.celsius)))
+                  .font(.caption).monospacedDigit().textSelection(.enabled)
+                  .fixedSize(horizontal: false, vertical: true)
+              }
+            } else {
+              Toggle(L10n.t("sensors.showUnknown"), isOn: $showUnknownSensors).font(.caption)
+            }
             HStack {
               Text(L10n.t("Bắt đầu tăng"))
               Spacer()

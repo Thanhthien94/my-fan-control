@@ -323,3 +323,7 @@
 "fan.short.number" = "Q%d";
 "settings.menuPreview" = "Xem trước";
 "menu.snapshotHint" = "Số đo tại lúc mở menu";
+
+"sensor.hottest" = "Cảm biến nóng nhất (tự chọn)";
+"sensor.hottestHint" = "Lấy nhiệt độ hợp lệ cao nhất trong tất cả cảm biến đọc được, kể cả SMC key chưa xác định. Tự chọn lại mỗi mẫu mới (thường mỗi giây).";
+"sensor.hottestCurrent" = "Nóng nhất ở mẫu mới nhất: %@ · %@";

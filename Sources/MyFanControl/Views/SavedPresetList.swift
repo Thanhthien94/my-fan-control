@@ -75,7 +75,7 @@ extension FanPreset {
     switch mode {
     case .automatic: return L10n.t("Tự động hệ thống")
     case .fixed: return String(format: "%.0f RPM", rpm)
-    case .sensor: return "\(sensor) · \(Int(start))–\(Int(full))°C"
+    case .sensor: return "\(sensorTitle) · \(Int(start))–\(Int(full))°C"
     }
   }
 }

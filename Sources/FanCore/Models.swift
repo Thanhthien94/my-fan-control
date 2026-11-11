@@ -66,6 +66,24 @@ public enum FanError: LocalizedError {
 }
 
 public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
+  /// Reserved selector, deliberately distinct from any four-byte SMC key.
+  /// Persist the selection, never the current winner, so presets and schedules stay dynamic.
+  public static let hottestSensorID = "auto:hottest"
+  public var followsHottestSensor: Bool { sensor == Self.hottestSensorID }
+  public var sensorTitle: String {
+    followsHottestSensor ? L10n.t("sensor.hottest") : sensor
+  }
+  public func resolvedSensor(in sensors: [Sensor]) -> Sensor? {
+    guard followsHottestSensor else { return sensors.first { $0.id == sensor } }
+    return sensors.filter { $0.celsius.isFinite && $0.celsius > 0 && $0.celsius < 130 }
+      .max { a, b in
+        a.celsius == b.celsius ? a.id > b.id : a.celsius < b.celsius
+      }
+  }
+  public func target(for fan: Fan, sensors: [Sensor]) throws -> Double? {
+    try target(for: fan, temperature: resolvedSensor(in: sensors)?.celsius)
+  }
+
   public var id: UUID = UUID()
   public var name: String
   public var mode: Mode
@@ -91,7 +109,9 @@ public struct FanPreset: Codable, Identifiable, Equatable, Sendable {
       throw FanError.invalid(L10n.t("preset.invalidDefinition"))
     }
     if mode == .sensor {
-      guard sensor.utf8.count == 4, sensor.utf8.allSatisfy({ (32...126).contains($0) }),
+      let validSource = followsHottestSensor
+        || (sensor.utf8.count == 4 && sensor.utf8.allSatisfy({ (32...126).contains($0) }))
+      guard validSource,
         start >= 20, full <= 90, full - start >= 5 else {
         throw FanError.invalid(L10n.t("preset.invalidDefinition"))
       }

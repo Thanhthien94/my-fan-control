@@ -61,7 +61,7 @@ public final class ControlSession {
       let targets = try rules.map { id, rule -> (Fan, Double) in
         guard let fan = snapshot.fans.first(where: { $0.id == id }),
           let rpm = try rule.target(
-            for: fan, temperature: snapshot.sensors.first(where: { $0.id == rule.sensor })?.celsius)
+            for: fan, sensors: snapshot.sensors)
         else {
           throw FanError.invalid(L10n.t("Cảm biến hoặc quạt không còn khả dụng."))
         }
@@ -84,8 +84,7 @@ public final class ControlSession {
     guard let fan = snapshot.fans.first(where: { $0.id == id }) else {
       throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
     }
-    let t = snapshot.sensors.first(where: { $0.id == rule.sensor })?.celsius
-    if let rpm = try rule.target(for: fan, temperature: t) {
+    if let rpm = try rule.target(for: fan, sensors: snapshot.sensors) {
       guard ControlSafety.permits(leaseAge: 0, sensors: snapshot.sensors) else {
         throw FanError.invalid(
           L10n.t("Cần cảm biến nhiệt hợp lệ dưới 90°C để điều khiển thủ công."))
@@ -123,7 +122,7 @@ public final class ControlSession {
         throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
       }
       _ = try rule.target(
-        for: fan, temperature: snapshot.sensors.first(where: { $0.id == rule.sensor })?.celsius)
+        for: fan, sensors: snapshot.sensors)
     }
     var touched = Set<Int>()
     do {

@@ -232,7 +232,7 @@ struct TemperaturePoint: Identifiable {
     do {
       for fan in snapshot.fans {
         _ = try rule.target(
-          for: fan, temperature: snapshot.sensors.first(where: { $0.id == rule.sensor })?.celsius)
+          for: fan, sensors: snapshot.sensors)
       }
       let result = try await hardware.send(
         HelperRequest("configureGroup", fanIDs: snapshot.fans.map(\.id), preset: rule))
@@ -334,7 +334,7 @@ struct TemperaturePoint: Identifiable {
           throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
         }
         _ = try rule.target(
-          for: fan, temperature: reading.sensors.first(where: { $0.id == rule.sensor })?.celsius)
+          for: fan, sensors: reading.sensors)
       }
       if rule.mode == .automatic, !helperEnabled,
         reading.fans.filter({ fanIDs.contains($0.id) }).allSatisfy({ !$0.manual })
@@ -374,7 +374,7 @@ struct TemperaturePoint: Identifiable {
     switch rule.mode {
     case .automatic: message = L10n.t("preset.alreadyAuto")
     case .fixed: message = L10n.f("mode.fixedApplied", scope, Int(rule.rpm), rule.name)
-    case .sensor: message = L10n.f("mode.sensorApplied", rule.sensor, scope, rule.name)
+    case .sensor: message = L10n.f("mode.sensorApplied", rule.sensorTitle, scope, rule.name)
     }
     showOperation(message, expecting: Dictionary(uniqueKeysWithValues: fanIDs.map { ($0, rule) }))
   }
