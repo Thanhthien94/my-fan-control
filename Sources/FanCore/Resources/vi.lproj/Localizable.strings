@@ -341,3 +341,10 @@
 "rpm.minimumInvalid" = "RPM tối thiểu phải là số hợp lệ từ 0 đến %d.";
 "rpm.sliderHint" = "Cận dưới theo RPM tối thiểu toàn app trong Cài đặt. Khởi động từ tốc độ thấp sẽ tăng dần.";
 "rpm.curveRange" = "Đường cong bắt đầu từ %d RPM (mức tối thiểu toàn app hoặc mặc định phần cứng).";
+
+"protection.title" = "Bảo vệ tuổi thọ quạt";
+"protection.detail" = "Tăng tốc mềm khi quạt khởi động từ 0 hoặc dưới 1000 RPM, tránh nhảy lệnh lên mức cao ngay. Áp dụng toàn app cho điều khiển thủ công và lịch. Mặc định bật; chưa có đo kiểm dài hạn về tuổi thọ quạt.";
+"protection.enabled" = "Đã bật Bảo vệ tuổi thọ quạt.";
+"protection.disabled" = "Đã tắt tăng tốc mềm. Bảo vệ nhiệt vẫn hoạt động.";
+"protection.invalid" = "Thiếu trạng thái Bảo vệ tuổi thọ quạt.";
+"rpm.sliderHintUnprotected" = "Cận dưới theo RPM tối thiểu toàn app trong Cài đặt. Bảo vệ tuổi thọ quạt đang tắt.";

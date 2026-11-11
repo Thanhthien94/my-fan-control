@@ -77,7 +77,7 @@ struct FanEditor: View {
                 .frame(width: 80).textFieldStyle(.roundedBorder)
               Text("RPM").foregroundStyle(.secondary)
             }
-            Text(L10n.t("rpm.sliderHint")).font(.caption).foregroundStyle(.secondary)
+            Text(L10n.t(store.fanProtectionEnabled ? "rpm.sliderHint" : "rpm.sliderHintUnprotected")).font(.caption).foregroundStyle(.secondary)
             Slider(value: $draft.rpm, in: limits, step: 50) { Text(L10n.t("RPM mục tiêu")) }
             HStack {
               Text("\(Int(limits.lowerBound)) RPM")

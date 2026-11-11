@@ -19,6 +19,12 @@ public final class ControlSession {
   private var rules = [Int: FanPreset]()
   private var minimums = [Int: Double]()
   private var startup = FanStartupRamp()
+  public private(set) var fanProtectionEnabled = true
+  public func setFanProtection(_ enabled: Bool) {
+    guard enabled != fanProtectionEnabled else { return }
+    fanProtectionEnabled = enabled
+    startup.reset()
+  }
   private let now: () -> ContinuousClock.Instant
   public private(set) var owned = Set<Int>()
   public var activeIDs: Set<Int> { Set(rules.keys) }
@@ -29,7 +35,8 @@ public final class ControlSession {
     self.now = now
   }
   private func writeTarget(fan: Fan, rpm: Double) throws {
-    try hardware.setTarget(fan: fan, rpm: startup.target(for: fan, requested: rpm, at: now()))
+    let target = fanProtectionEnabled ? startup.target(for: fan, requested: rpm, at: now()) : rpm
+    try hardware.setTarget(fan: fan, rpm: target)
   }
   /// Change the global floor for currently active rules without changing their saved definitions.
   public func setMinimumRPM(_ value: Double?) throws {

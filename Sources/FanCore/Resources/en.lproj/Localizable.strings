@@ -341,3 +341,10 @@
 "rpm.minimumInvalid" = "Minimum RPM must be a finite number from 0 to %d.";
 "rpm.sliderHint" = "Lower bound follows the app-wide minimum in Settings. Low-speed startup increases gradually.";
 "rpm.curveRange" = "Curve starts at %d RPM (app-wide minimum or hardware default).";
+
+"protection.title" = "Fan Longevity Protection";
+"protection.detail" = "Softens startup from 0 or below 1000 RPM to avoid an immediate jump to a high target. Applies app-wide to manual policies and schedules. Enabled by default; no long-term fan-lifetime measurements are available.";
+"protection.enabled" = "Fan Longevity Protection enabled.";
+"protection.disabled" = "Soft startup disabled. Thermal protection remains active.";
+"protection.invalid" = "Missing Fan Longevity Protection state.";
+"rpm.sliderHintUnprotected" = "Lower bound follows the app-wide minimum in Settings. Fan Longevity Protection is off.";

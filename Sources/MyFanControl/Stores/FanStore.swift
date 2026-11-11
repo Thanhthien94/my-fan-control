@@ -25,6 +25,7 @@ struct TemperaturePoint: Identifiable {
   var restoring = Set<Int>()
   private var pendingPresetRestorations = [UUID: Set<Int>]()
   private(set) var minimumRPM: Double?
+  private(set) var fanProtectionEnabled = true
   var maximumMinimumRPM: Double { fans.map(\.maximum).min() ?? 20000 }
   var presets: [FanPreset]
   var history = [TemperaturePoint]()
@@ -46,6 +47,27 @@ struct TemperaturePoint: Identifiable {
       $0.celsius < $1.celsius
     })?.id
       ?? valid.max(by: { $0.celsius < $1.celsius })?.id ?? ""
+  }
+  @discardableResult func setFanProtection(_ enabled: Bool) async -> Bool {
+    guard !busy, !schedules.isProcessing else { error = L10n.t("operation.busy"); return false }
+    busy = true
+    defer { busy = false }
+    operationMessage = nil
+    do {
+      if helperEnabled {
+        _ = try await hardware.send(HelperRequest("setFanProtection", fanProtectionEnabled: enabled))
+      } else if !active.isEmpty || !controlled.isEmpty || !restoring.isEmpty {
+        throw FanError.helper(L10n.t("Chưa bật quyền điều khiển quạt."))
+      }
+      fanProtectionEnabled = enabled
+      defaults.set(enabled, forKey: "fanProtectionEnabled")
+      error = nil
+      showOperation(L10n.t(enabled ? "protection.enabled" : "protection.disabled"))
+      return true
+    } catch {
+      self.error = error.localizedDescription
+      return false
+    }
   }
   @discardableResult func setMinimumRPM(_ value: Double?) async -> Bool {
     guard !busy, !schedules.isProcessing else { error = L10n.t("operation.busy"); return false }
@@ -102,6 +124,7 @@ struct TemperaturePoint: Identifiable {
     self.feedbackNow = feedbackNow
     self.hardware = hardware
     self.defaults = defaults
+    self.fanProtectionEnabled = defaults.object(forKey: "fanProtectionEnabled") as? Bool ?? true
     if let value = defaults.object(forKey: "minimumRPM") as? Double,
       value.isFinite, value >= 0, value <= 20000 { self.minimumRPM = value }
     self.schedules = schedules ?? ScheduleStore(defaults: defaults)
@@ -224,7 +247,7 @@ struct TemperaturePoint: Identifiable {
     busy = true
     defer { busy = false }
     do {
-      let result = try await hardware.send(HelperRequest("configure", fanID: id, preset: rule, minimumRPM: minimumRPM))
+      let result = try await hardware.send(HelperRequest("configure", fanID: id, preset: rule, minimumRPM: minimumRPM, fanProtectionEnabled: fanProtectionEnabled))
       controlled = Set(result.controlled)
       if controlled.contains(id) { active[id] = rule } else { active.removeValue(forKey: id) }
       helperMessage = result.message
@@ -271,7 +294,7 @@ struct TemperaturePoint: Identifiable {
           for: fan, sensors: snapshot.sensors, minimumRPM: minimumRPM)
       }
       let result = try await hardware.send(
-        HelperRequest("configureGroup", fanIDs: snapshot.fans.map(\.id), preset: rule, minimumRPM: minimumRPM))
+        HelperRequest("configureGroup", fanIDs: snapshot.fans.map(\.id), preset: rule, minimumRPM: minimumRPM, fanProtectionEnabled: fanProtectionEnabled))
       controlled = Set(result.controlled)
       for fan in snapshot.fans {
         if controlled.contains(fan.id) {
