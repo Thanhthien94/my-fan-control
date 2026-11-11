@@ -1,0 +1,11 @@
+# Deleting an active preset
+
+Deleting a saved preset now restores each fan whose active policy has the same stable preset ID before removing the definition. Matching by ID also covers a saved definition edited after application. Other fans keep their policies. When the selected preset disappears, the editor switches its draft to Automatic.
+
+The operation stays busy across helper requests, rejects concurrent deletion/control changes, and does not start while the schedule executor is processing. It sends per-fan automatic requests and requires the fan to be absent from both controlled and restoring sets. No new authorization prompt is started. Every affected fan is attempted even if one fails. A failed or unconfirmed restoration preserves the preset and reports an error; successful partial restorations remain automatic and retry only touches remaining active fans.
+
+Successful restorations release current schedule ownership for those fans. Future schedules keep their embedded policy, as stated by the existing deletion contract and updated VI/EN confirmation. Deleting an unused preset does not issue fan commands. Selecting a preset alone does not make it active.
+
+Verification on 2026-11-11: RED commit `2fe3a26` compiled/executed six new app tests and reproduced ten assertions failing under the old delete-only behavior. GREEN commit `c947893` passed 119 tests (75 core, 44 app), including eight preset-deletion tests. `python3 script/check_localization.py` passed 330 matching VI/EN keys/placeholders. Optimized native build succeeded. Tests use a fake backend, including failed restoration, unconfirmed successful reply, missing helper, busy state, mixed preset ownership, modified saved definition, persistence and running-schedule cleanup. No coverage percentage or new physical fan-deletion result is claimed.
+
+Self-review: accuracy 4/5 (fake hardware proof; physical deletion untested); completeness 4/5 (success/failure/ownership covered; UI observation still separate); clarity 4/5 (VI/EN explains restore first and independent schedules); actionability 4/5 (native build ready, explicit delete flow); conciseness 4/5 (single store operation reuses helper commands). Overall 4.0/5. The next useful check is an intentional physical active-preset deletion; preserve real user presets during QA.
