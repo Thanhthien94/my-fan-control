@@ -46,6 +46,20 @@ import Testing
     #expect(await hardware.ids().isEmpty)
     #expect(store.presets.isEmpty && store.error == nil)
   }
+  @Test func failedRestoreRemainsTrackedAfterStatusDropsTheActivePolicy() async {
+    let (store, hardware, _, _) = ScheduleExecutionTests().fixture(.now)
+    let preset = FanPreset(name: "Work", mode: .fixed, rpm: 2500)
+    store.save(preset)
+    #expect(await store.activate(preset, fanIDs: [0]))
+    await hardware.failOneRestore(retirePolicy: true)
+    await store.deletePreset(preset.id)
+    await store.refresh()
+    #expect(store.active.isEmpty && store.restoring == [0])
+    let count = await hardware.configurationCount()
+    await store.deletePreset(preset.id)
+    #expect(await hardware.configurationCount() == count + 1)
+    #expect(store.presets.isEmpty && store.restoring.isEmpty)
+  }
   @Test func successfulReplyWithoutAutomaticConfirmationStillKeepsPreset() async {
     let (store, hardware, _, _) = ScheduleExecutionTests().fixture(.now)
     let preset = FanPreset(name: "Work", mode: .fixed, rpm: 2500)
