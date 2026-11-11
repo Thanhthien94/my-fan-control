@@ -59,6 +59,20 @@ struct FanHandoffTests {
     #expect(waited > 0 && waited < 0.2)
     #expect(hw.values["F0Tg"] == 200 && hw.values["F0Md"] == 1)
   }
+  @Test func temporarilyRejectedModeDoesNotDelayTheLowTargetWrite() throws {
+    let hw = FanKeyFake()
+    var modeAttempts = 0
+    let driver = FanKeyController(read: hw.read, write: { key, value in
+      if key == "F0Md", value == 1 {
+        modeAttempts += 1
+        if hw.values["F0Tg"] == 0 { throw FanError.read(key, -130) }
+      }
+      try hw.write(key, value)
+    }, wait: { _ in })
+    try driver.setTarget(fan: fan, rpm: 200)
+    #expect(modeAttempts == 2)
+    #expect(hw.values["F0Md"] == 1 && hw.values["F0Tg"] == 200)
+  }
   @Test func automaticHandoffWaitsForFirmwareReadback() throws {
     let hw = FanKeyFake()
     var pending = 0
