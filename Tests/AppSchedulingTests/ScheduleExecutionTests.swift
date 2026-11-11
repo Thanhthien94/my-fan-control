@@ -8,6 +8,10 @@ actor HardwareFake: HardwareBackend {
   var policies = [Int: FanPreset]()
   var commands = [String]()
   var requestedMinimums = [Double?]()
+  var requestedProtections = [Bool?]()
+  var rejectsProtection = false
+  func protectionRequests() -> [Bool?] { requestedProtections }
+  func rejectProtectionUpdate() { rejectsProtection = true }
   func minimumRequests() -> [Double?] { requestedMinimums }
   var failFan: Int?
   var failedRestores = 0
@@ -44,6 +48,12 @@ actor HardwareFake: HardwareBackend {
   func send(_ request: HelperRequest) throws -> HelperResponse {
     guard online else { throw FanError.helper("Authorization required") }
     commands.append(request.command)
+    if ["configure", "configureGroup", "setFanProtection"].contains(request.command) {
+      requestedProtections.append(request.fanProtectionEnabled)
+    }
+    if request.command == "setFanProtection", rejectsProtection {
+      throw FanError.helper("Protection update rejected")
+    }
     if ["configure", "configureGroup", "setMinimumRPM"].contains(request.command) {
       requestedMinimums.append(request.minimumRPM)
     }
