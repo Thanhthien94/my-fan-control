@@ -21,3 +21,5 @@ Native UI: candidate source `5530226` showed the Vietnamese checkbox enabled by 
 Self-review: accuracy 4/5 (command behavior and UI verified; lifetime unmeasured), completeness 4/5 (toggle/default/persistence/thermal independence covered; firmware response untested), clarity 4/5 (feature name paired with explicit mechanism and measurement limit), actionability 5/5 (candidate installed, default enabled), conciseness 4/5 (one setting shared through helper). Overall 4.2/5. Physical startup verification remains the next useful validation, without inferring lifetime benefit from it.
 
 The [shared-gate startup fix](startup-handoff-fix.md) retains initial group RPM baselines, starts ramp timing after write confirmation and replaces the fixed gate sleep with bounded readback. Physical firmware kick behavior still requires measurement.
+
+Follow-up real-device measurement reproduced a startup peak despite these software changes. See [measured command versus physical RPM](startup-measurement-2026-11-11.md); the ramp must not be presented as preventing the firmware-controlled initial rise.

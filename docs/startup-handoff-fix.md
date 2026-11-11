@@ -26,3 +26,5 @@ Before replacing the app, native UI showed the old build in Automatic with an `A
 Physical fan acceleration after the fix has not been measured. Firmware may enforce a minimum starting speed or a brief kick even when low command targets are sent immediately. Removing software wait and preserving ramp state must not be described as guaranteeing a physical 0→200→400 trajectory or a lifetime benefit.
 
 Self-review: accuracy 4/5 (all software reproductions pass; physical trace missing), completeness 4/5 (both reported software paths addressed; actual kick still needs measurement), clarity 4/5 (fresh safety readings distinguished from startup detection), actionability 5/5 (candidate installed with forced helper upgrade), conciseness 4/5 (narrow handoff/ramp changes). Overall 4.2/5. Next useful verification is a physical start of both fans, observing target and measured RPM separately.
+
+Follow-up real-device measurement reproduced a startup peak despite these software changes. See [measured command versus physical RPM](startup-measurement-2026-11-11.md); the ramp must not be presented as preventing the firmware-controlled initial rise.
