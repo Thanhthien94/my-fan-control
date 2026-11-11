@@ -18,3 +18,5 @@ Policies are revalidated using fresh hardware readings. Ownership is recorded be
 These limits must stay visible in preview releases. A stable release requires a reviewed helper lifecycle, stronger client authentication, and hardware/sleep/wake/fault testing.
 
 Group requests validate every selected fan before the first write. Physical writes remain sequential; on failure, touched fans are returned to automatic and failed restoration stays tracked for retry.
+
+Explicit custom minimum RPM can request values below the reported factory minimum, including zero. This is opt-in per app; default behavior uses reported minima. Startup command smoothing, maximum-RPM validation, mode/target readback and the existing thermal/data/lease restoration checks still apply. Firmware support and actual stop/acceleration behavior are not established by the fake-hardware tests. See [global minimum RPM](global-minimum-rpm.md).
