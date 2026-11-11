@@ -23,6 +23,7 @@ struct TemperaturePoint: Identifiable {
   var active = [Int: FanPreset]()
   var controlled = Set<Int>()
   var restoring = Set<Int>()
+  private var pendingPresetRestorations = [UUID: Set<Int>]()
   var presets: [FanPreset]
   var history = [TemperaturePoint]()
   var selectedFan = 0
@@ -430,7 +431,11 @@ struct TemperaturePoint: Identifiable {
     }
     guard let preset = presets.first(where: { $0.id == id }) else { return false }
     // Match the stable identity: a saved definition may differ from its running copy.
-    let affected = active.filter { $0.value.id == id }.keys.sorted()
+    let pending = (pendingPresetRestorations[id] ?? []).filter {
+      active[$0] == nil || active[$0]?.id == id
+    }
+    let affected = Set(active.filter { $0.value.id == id }.keys).union(pending).sorted()
+    pendingPresetRestorations[id] = Set(affected)
     operationMessage = nil
     error = nil
     busy = true
@@ -452,6 +457,7 @@ struct TemperaturePoint: Identifiable {
           throw FanError.helper(L10n.t("schedule.restorePending"))
         }
         active.removeValue(forKey: fanID)
+        pendingPresetRestorations[id]?.remove(fanID)
         schedules.manualOverride(fanID: fanID)
       } catch {
         // Attempt the other affected fans too; retain the preset if any restore fails.
@@ -462,6 +468,7 @@ struct TemperaturePoint: Identifiable {
       error = L10n.f("preset.deleteRestoreFailed", failure)
       return false
     }
+    pendingPresetRestorations.removeValue(forKey: id)
     presets.removeAll { $0.id == id }
     persist()
     if !affected.isEmpty { await refresh() }
