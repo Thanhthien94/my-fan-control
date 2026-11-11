@@ -7,6 +7,8 @@ import Testing
 actor HardwareFake: HardwareBackend {
   var policies = [Int: FanPreset]()
   var commands = [String]()
+  var requestedMinimums = [Double?]()
+  func minimumRequests() -> [Double?] { requestedMinimums }
   var failFan: Int?
   var failedRestores = 0
   var unconfirmedRestore = false
@@ -42,6 +44,9 @@ actor HardwareFake: HardwareBackend {
   func send(_ request: HelperRequest) throws -> HelperResponse {
     guard online else { throw FanError.helper("Authorization required") }
     commands.append(request.command)
+    if ["configure", "configureGroup", "setMinimumRPM"].contains(request.command) {
+      requestedMinimums.append(request.minimumRPM)
+    }
     if request.command == "configureGroup", let ids = request.fanIDs, let rule = request.preset {
       do {
         for id in ids {
