@@ -46,6 +46,27 @@ import Testing
     #expect(await hardware.ids().isEmpty)
     #expect(store.presets.isEmpty && store.error == nil)
   }
+  @Test func successfulReplyWithoutAutomaticConfirmationStillKeepsPreset() async {
+    let (store, hardware, _, _) = ScheduleExecutionTests().fixture(.now)
+    let preset = FanPreset(name: "Work", mode: .fixed, rpm: 2500)
+    store.save(preset)
+    #expect(await store.activate(preset, fanIDs: [0]))
+    await hardware.leaveRestoreUnconfirmed()
+    await store.deletePreset(preset.id)
+    #expect(store.presets == [preset] && store.error != nil)
+    #expect(store.active[0] == preset && store.operationMessage == nil)
+  }
+  @Test func missingHelperNeverAuthorizesDeletionOrDropsItsActivePreset() async {
+    let (store, hardware, _, _) = ScheduleExecutionTests().fixture(.now)
+    let preset = FanPreset(name: "Work", mode: .fixed, rpm: 2500)
+    store.save(preset)
+    #expect(await store.activate(preset, fanIDs: [0]))
+    store.helperEnabled = false
+    await store.deletePreset(preset.id)
+    #expect(store.presets == [preset] && store.error != nil)
+    #expect(await hardware.ids() == [0])
+    #expect(await hardware.authorizations() == 0)
+  }
   @Test func deletingAnUnusedPresetDoesNotAuthorizeOrAlterRunningFans() async {
     let (store, hardware, _, _) = ScheduleExecutionTests().fixture(.now)
     let unused = FanPreset(name: "Unused", mode: .fixed, rpm: 2500)

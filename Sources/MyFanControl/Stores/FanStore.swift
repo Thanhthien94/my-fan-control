@@ -423,12 +423,50 @@ struct TemperaturePoint: Identifiable {
     return try encoder.encode(Report(appVersion: meta.version, build: meta.build,
       revision: meta.revision, macOS: ProcessInfo.processInfo.operatingSystemVersionString, hardware: report))
   }
-  func deletePreset(_ id: UUID) {
-    let name = presets.first(where: { $0.id == id })?.name ?? ""
+  @discardableResult func deletePreset(_ id: UUID) async -> Bool {
+    guard !busy, !schedules.isProcessing else {
+      error = L10n.t("operation.busy")
+      return false
+    }
+    guard let preset = presets.first(where: { $0.id == id }) else { return false }
+    // Match the stable identity: a saved definition may differ from its running copy.
+    let affected = active.filter { $0.value.id == id }.keys.sorted()
+    operationMessage = nil
+    error = nil
+    busy = true
+    defer { busy = false }
+    var failure: String?
+    let automatic = FanPreset(name: L10n.t("Tự động"), mode: .automatic)
+    // Keep the operation locked across awaits so schedules cannot reclaim restored fans.
+    for fanID in affected {
+      do {
+        guard helperEnabled else {
+          throw FanError.helper(L10n.t("Chưa bật quyền điều khiển quạt."))
+        }
+        let result = try await hardware.send(
+          HelperRequest("configure", fanID: fanID, preset: automatic))
+        controlled = Set(result.controlled)
+        restoring = Set(result.restoring ?? [])
+        helperMessage = result.message
+        guard !controlled.contains(fanID), !restoring.contains(fanID) else {
+          throw FanError.helper(L10n.t("schedule.restorePending"))
+        }
+        active.removeValue(forKey: fanID)
+        schedules.manualOverride(fanID: fanID)
+      } catch {
+        // Attempt the other affected fans too; retain the preset if any restore fails.
+        if failure == nil { failure = error.localizedDescription }
+      }
+    }
+    if let failure {
+      error = L10n.f("preset.deleteRestoreFailed", failure)
+      return false
+    }
     presets.removeAll { $0.id == id }
     persist()
-    error = nil
-    showOperation(L10n.f("preset.deleted", name))
+    if !affected.isEmpty { await refresh() }
+    showOperation(L10n.f(affected.isEmpty ? "preset.deleted" : "preset.deletedRestored", preset.name))
+    return true
   }
   private func persist() {
     if let data = try? JSONEncoder().encode(presets) {

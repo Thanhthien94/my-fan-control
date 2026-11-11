@@ -62,7 +62,9 @@ struct SavedPresetList: View {
       titleVisibility: .visible
     ) {
       Button(L10n.t("Xóa preset"), role: .destructive) {
-        if let preset = pendingDelete { store.deletePreset(preset.id) }
+        if let preset = pendingDelete {
+          Task { await store.deletePreset(preset.id) }
+        }
         pendingDelete = nil
       }
       Button(L10n.t("schedule.close"), role: .cancel) { pendingDelete = nil }

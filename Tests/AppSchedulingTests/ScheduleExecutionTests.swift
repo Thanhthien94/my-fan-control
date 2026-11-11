@@ -9,6 +9,7 @@ actor HardwareFake: HardwareBackend {
   var commands = [String]()
   var failFan: Int?
   var failedRestores = 0
+  var unconfirmedRestore = false
   var online = true
   var cancelAuthorization = false
   var authorizationCount = 0
@@ -22,6 +23,7 @@ actor HardwareFake: HardwareBackend {
   }
   func handBackAll() { policies = [:] }
   func failOneRestore() { failedRestores = 1 }
+  func leaveRestoreUnconfirmed() { unconfirmedRestore = true }
   func fail(on id: Int) { failFan = id }
   func read() -> Snapshot {
     Snapshot(
@@ -56,7 +58,9 @@ actor HardwareFake: HardwareBackend {
         throw FanError.invalid("Injected restore failure")
       }
       if id == failFan, rule.mode != .automatic { throw FanError.invalid("Injected failure") }
-      if rule.mode == .automatic { policies.removeValue(forKey: id) } else { policies[id] = rule }
+      if rule.mode == .automatic {
+        if !unconfirmedRestore { policies.removeValue(forKey: id) }
+      } else { policies[id] = rule }
     }
     if request.command == "automatic" || request.command == "shutdown" { policies = [:] }
     var response = HelperResponse(ok: true, controlled: policies.keys.sorted())

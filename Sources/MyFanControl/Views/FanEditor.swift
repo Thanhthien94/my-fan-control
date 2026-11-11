@@ -183,6 +183,12 @@ struct FanEditor: View {
           sensor: store.preferredSensorID)
       }
     }
+    .onChange(of: store.presets.map(\.id)) { previous, current in
+      if previous.contains(draft.id), !current.contains(draft.id) {
+        draft = FanPreset(name: L10n.t("Tự động"), mode: .automatic,
+          rpm: min(limits.upperBound, max(limits.lowerBound, 2500)), sensor: store.preferredSensorID)
+      }
+    }
     .onChange(of: applyAll) { _, _ in
       if draft.mode == .fixed {
         draft.rpm = min(limits.upperBound, max(limits.lowerBound, draft.rpm))

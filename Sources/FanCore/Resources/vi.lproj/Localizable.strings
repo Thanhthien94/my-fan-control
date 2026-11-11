@@ -215,7 +215,7 @@
 "preset.applyHint" = "Chọn preset ở trên, kiểm tra cấu hình rồi bấm Áp dụng.";
 "preset.permissionHint" = "Lần áp dụng đầu sẽ hỏi quyền quản trị macOS. Chọn hoặc lưu preset chưa làm đổi tốc độ quạt.";
 "preset.deleteNamed" = "Xóa %@";
-"preset.confirmDelete" = "Xóa preset “%@”? Các lịch đã tạo vẫn giữ cấu hình riêng.";
+"preset.confirmDelete" = "Xóa preset “%@”? Quạt đang dùng preset sẽ được trả về tự động trước. Các lịch đã tạo vẫn giữ cấu hình riêng.";
 "preset.nameRequired" = "Nhập tên preset từ 1–80 ký tự.";
 "preset.duplicateName" = "Tên preset đã có. Chọn preset đó để cập nhật hoặc dùng tên khác.";
 "preset.limit" = "Bạn có thể lưu tối đa 50 preset.";
@@ -327,3 +327,7 @@
 "sensor.hottest" = "Cảm biến nóng nhất (tự chọn)";
 "sensor.hottestHint" = "Lấy nhiệt độ hợp lệ cao nhất trong tất cả cảm biến đọc được, kể cả SMC key chưa xác định. Tự chọn lại mỗi mẫu mới (thường mỗi giây).";
 "sensor.hottestCurrent" = "Nóng nhất ở mẫu mới nhất: %@ · %@";
+
+"preset.deletedRestored" = "Đã xóa “%@” và trả các quạt đang dùng về tự động.";
+
+"preset.deleteRestoreFailed" = "Đã giữ preset vì chưa xác nhận được quạt về tự động: %@";
