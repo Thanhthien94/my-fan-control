@@ -38,6 +38,9 @@ struct GeneralSettingsView: View {
         Toggle(L10n.t("Hiển thị cảm biến bằng °F"), isOn: $fahrenheit)
         LabeledContent(L10n.t("Cập nhật"), value: L10n.t("Mỗi 1 giây"))
         Divider()
+        FanProtectionSettings(store: store)
+        ThermalThresholdSettings(store: store)
+        Divider()
         Picker(L10n.t("settings.menuSensor"), selection: $menuBarSensorID) {
           Text(L10n.t("Cảm biến nóng nhất")).tag("")
           ForEach(store.sensors) { sensor in Text(sensor.name + " · " + sensor.id).tag(sensor.id) }
@@ -155,5 +158,56 @@ struct SupportSettingsView: View {
         if let feedback { Text(feedback).font(.callout).textSelection(.enabled) }
       }.padding(16)
     }
+  }
+}
+
+
+private struct FanProtectionSettings: View {
+  var store: FanStore
+  @State private var feedback: String?
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Toggle(L10n.t("protection.title"), isOn: Binding(
+        get: { store.fanProtectionEnabled },
+        set: { enabled in
+          Task {
+            let success = await store.setFanProtection(enabled)
+            feedback = success ? L10n.t(enabled ? "protection.enabled" : "protection.disabled") : store.error
+          }
+        }))
+      Text(L10n.t("protection.detail")).font(.caption).foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+      Text(L10n.t("rpm.softStartHint")).font(.caption).foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+      if let feedback { Text(feedback).font(.caption).textSelection(.enabled) }
+    }.disabled(store.busy)
+  }
+}
+
+private struct ThermalThresholdSettings: View {
+  var store: FanStore
+  @AppStorage("fahrenheit") private var fahrenheit = false
+  @State private var draft = ControlSafety.defaultThreshold
+  @State private var feedback: String?
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(L10n.t("thermal.title")).font(.headline)
+      HStack {
+        Stepper(value: $draft, in: ControlSafety.thresholdRange, step: 1) {
+          Text((fahrenheit ? TemperatureUnit.fahrenheit : .celsius).text(draft, decimals: 0))
+            .monospacedDigit()
+        }
+        Button(L10n.t("thermal.apply")) {
+          Task {
+            let success = await store.setThermalThreshold(draft)
+            feedback = success ? L10n.t("thermal.saved") : store.error
+          }
+        }.disabled(draft == store.thermalThreshold)
+      }
+      Text(L10n.t("thermal.detail")).font(.caption).foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+      if let feedback { Text(feedback).font(.caption).textSelection(.enabled) }
+    }.disabled(store.busy)
+      .onAppear { draft = store.thermalThreshold }
   }
 }

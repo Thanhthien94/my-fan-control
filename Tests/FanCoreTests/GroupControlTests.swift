@@ -25,7 +25,7 @@ struct GroupControlTests {
     let control = ControlSession(hardware: hw)
     #expect(throws: (any Error).self) {
       try control.configureGroup(
-        ids: [0, 1], rule: FanPreset(name: "Too low", mode: .fixed, rpm: 1200))
+        ids: [0, 1], rule: FanPreset(name: "Too high for right", mode: .fixed, rpm: 5500))
     }
     #expect(hw.writes.isEmpty)
     try control.configureGroup(ids: [0, 1], rule: FanPreset(name: "Both", mode: .fixed, rpm: 2500))

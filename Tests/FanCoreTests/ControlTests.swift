@@ -13,7 +13,7 @@ struct ControlTests {
   }
   @Test func testInvalidOrMissingSensorNeverProducesManualTarget() {
     let rule = FanPreset(name: "Curve", mode: .sensor)
-    for t: Double? in [nil, .nan, .infinity, -1, 130] {
+    for t: Double? in [nil, .nan, .infinity, -1, 200] {
       #expect(throws: (any Error).self) { try rule.target(for: fan, temperature: t) }
     }
     #expect(throws: (any Error).self) {
@@ -21,7 +21,7 @@ struct ControlTests {
         for: fan, temperature: 60)
     }
     #expect(throws: (any Error).self) {
-      try FanPreset(name: "Bad", mode: .fixed, rpm: 0).target(for: fan, temperature: nil)
+      try FanPreset(name: "Bad", mode: .fixed, rpm: -1).target(for: fan, temperature: nil)
     }
     #expect(throws: (any Error).self) {
       try FanPreset(name: "Bad", mode: .fixed, rpm: .nan).target(for: fan, temperature: nil)

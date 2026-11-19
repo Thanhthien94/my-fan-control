@@ -8,17 +8,21 @@ public struct HelperRequest: Codable {
   public var fanID: Int?
   public var fanIDs: [Int]?
   public var preset: FanPreset?
-  public init(_ command: String, fanID: Int? = nil, fanIDs: [Int]? = nil, preset: FanPreset? = nil)
+  public var thermalThreshold: Double?
+  public var fanProtectionEnabled: Bool?
+  public init(_ command: String, fanID: Int? = nil, fanIDs: [Int]? = nil, preset: FanPreset? = nil, fanProtectionEnabled: Bool? = nil, thermalThreshold: Double? = nil)
   {
+    self.thermalThreshold = thermalThreshold
     self.command = command
     self.fanID = fanID
     self.fanIDs = fanIDs
     self.preset = preset
+    self.fanProtectionEnabled = fanProtectionEnabled
     self.language = L10n.language
   }
 }
 public struct HelperResponse: Codable {
-  public static let currentProtocolVersion = 6
+  public static let currentProtocolVersion = 13
   public var ok: Bool
   public var message: String?
   public var controlled: [Int]
@@ -67,8 +71,11 @@ public enum HelperClient {
 
 /// A continuous-clock lease and fresh temperatures are both required for manual control.
 public enum ControlSafety {
-  public static func permits(leaseAge: Double, sensors: [Sensor]) -> Bool {
-    leaseAge.isFinite && leaseAge >= 0 && leaseAge < 10 && !sensors.isEmpty
-      && sensors.allSatisfy { $0.celsius.isFinite && $0.celsius > 0 && $0.celsius < 90 }
+  public static let defaultThreshold = 90.0
+  public static let thresholdRange = 60.0...150.0
+  public static func validThreshold(_ value: Double) -> Bool { value.isFinite && thresholdRange.contains(value) }
+  public static func permits(leaseAge: Double, sensors: [Sensor], threshold: Double = defaultThreshold) -> Bool {
+    validThreshold(threshold) && leaseAge.isFinite && leaseAge >= 0 && leaseAge < 10 && !sensors.isEmpty
+      && sensors.allSatisfy { $0.celsius.isFinite && $0.celsius > 0 && $0.celsius < threshold }
   }
 }
