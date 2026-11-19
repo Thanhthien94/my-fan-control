@@ -21,3 +21,6 @@ RED `386227a`: migration tests ran and failed because old minimum preferences st
 Source `33d0330` was installed in Applications after normal quit. Native UI confirmed no minimum-RPM setting in General, protection still enabled, and the fixed-RPM slider still bounded at 1350–5777 RPM on the tested Mac. The legacy global preference was cleared and existing presets retained. No new physical control trial was performed for this removal; the earlier firmware trace concerns a superseded zero-start implementation.
 
 Self-review: accuracy 4/5 (tests/UI verified; physical slew not remeasured), completeness 4/5 (UI, persistence and helper override removed; other-model firmware behavior remains unverified), clarity 4/5 (hardware bounds apply with protection either on or off), actionability 5/5 (candidate installed), conciseness 4/5 (removed the dead override path). Overall 4.2/5.
+
+
+Thermal hand-back is configured separately in Settings (60–150°C, default 90°C). This does not change the RPM slew policy. See [thermal-threshold.md](thermal-threshold.md).

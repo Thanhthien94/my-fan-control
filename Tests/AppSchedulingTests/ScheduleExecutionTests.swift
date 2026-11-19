@@ -5,6 +5,10 @@ import Testing
 @testable import MyFanControl
 
 actor HardwareFake: HardwareBackend {
+  var requestedThresholds = [Double?]()
+  var rejectsThreshold = false
+  func thresholdRequests() -> [Double?] { requestedThresholds }
+  func rejectThresholdUpdate() { rejectsThreshold = true }
   var policies = [Int: FanPreset]()
   var commands = [String]()
   var requestedProtections = [Bool?]()
@@ -46,6 +50,12 @@ actor HardwareFake: HardwareBackend {
   func send(_ request: HelperRequest) throws -> HelperResponse {
     guard online else { throw FanError.helper("Authorization required") }
     commands.append(request.command)
+    if ["configure", "configureGroup", "setThermalThreshold"].contains(request.command) {
+      requestedThresholds.append(request.thermalThreshold)
+    }
+    if request.command == "setThermalThreshold", rejectsThreshold {
+      throw FanError.helper("Threshold update rejected")
+    }
     if ["configure", "configureGroup", "setFanProtection"].contains(request.command) {
       requestedProtections.append(request.fanProtectionEnabled)
     }

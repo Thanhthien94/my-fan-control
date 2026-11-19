@@ -345,3 +345,9 @@
 
 
 "mode.fixedAppliedTargets" = "Đã đặt mục tiêu %@ · “%@”.";
+"thermal.title" = "Ngưỡng trả về tự động";
+"thermal.apply" = "Áp dụng ngưỡng";
+"thermal.saved" = "Đã cập nhật ngưỡng trả về tự động.";
+"thermal.invalid" = "Ngưỡng trả về tự động phải từ 60–150°C.";
+"thermal.requires" = "Điều khiển thủ công cần mọi cảm biến nhiệt hợp lệ dưới %.0f°C.";
+"thermal.detail" = "Mặc định 90°C · Cho phép 60–150°C (140–302°F). Khi bất kỳ cảm biến nào chạm ngưỡng, tất cả quạt đang điều khiển sẽ về tự động. Áp dụng ngay khi lưu. Ngưỡng cao hơn khiến macOS nhận lại quyền điều khiển muộn hơn; đây không phải giới hạn nhiệt do Apple công bố.";

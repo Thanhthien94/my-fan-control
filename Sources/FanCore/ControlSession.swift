@@ -18,6 +18,19 @@ public final class ControlSession {
   private let hardware: FanHardware
   private var rules = [Int: FanPreset]()
   private var startup = FanStartupRamp()
+  public private(set) var thermalThreshold = ControlSafety.defaultThreshold
+  public func setThermalThreshold(_ value: Double) throws {
+    guard ControlSafety.validThreshold(value) else { throw FanError.invalid(L10n.t("thermal.invalid")) }
+    guard value != thermalThreshold else { return }
+    let previous = thermalThreshold
+    thermalThreshold = value
+    // Apply immediately to all owned policies using fresh telemetry.
+    tick(leaseAge: 0)
+    guard restoringIDs.isEmpty else {
+      thermalThreshold = previous
+      throw FanError.helper(notice ?? L10n.t("Không khôi phục được quạt."))
+    }
+  }
   public private(set) var fanProtectionEnabled = true
   public func setFanProtection(_ enabled: Bool) throws {
     guard enabled != fanProtectionEnabled else { return }
@@ -28,7 +41,7 @@ public final class ControlSession {
     do {
       hardware.beginControlOperation()
       let snapshot = try hardware.snapshot()
-      guard ControlSafety.permits(leaseAge: 0, sensors: snapshot.sensors) else {
+      guard ControlSafety.permits(leaseAge: 0, sensors: snapshot.sensors, threshold: thermalThreshold) else {
         throw FanError.invalid(L10n.t("Đã về tự động: nhiệt độ cao, mất cảm biến hoặc hết phiên."))
       }
       let targets = try rules.map { id, rule -> (Fan, Double) in
@@ -97,7 +110,7 @@ public final class ControlSession {
     do {
       hardware.beginControlOperation()
       let snapshot = try hardware.snapshot()
-      guard ControlSafety.permits(leaseAge: leaseAge, sensors: snapshot.sensors) else {
+      guard ControlSafety.permits(leaseAge: leaseAge, sensors: snapshot.sensors, threshold: thermalThreshold) else {
         throw FanError.invalid(L10n.t("Đã về tự động: nhiệt độ cao, mất cảm biến hoặc hết phiên."))
       }
       // Resolve every target before writing any fan.
@@ -128,9 +141,9 @@ public final class ControlSession {
       throw FanError.invalid(L10n.t("Không tìm thấy quạt."))
     }
     if let rpm = try rule.target(for: fan, sensors: snapshot.sensors) {
-      guard ControlSafety.permits(leaseAge: 0, sensors: snapshot.sensors) else {
+      guard ControlSafety.permits(leaseAge: 0, sensors: snapshot.sensors, threshold: thermalThreshold) else {
         throw FanError.invalid(
-          L10n.t("Cần cảm biến nhiệt hợp lệ dưới 90°C để điều khiển thủ công."))
+          L10n.f("thermal.requires", thermalThreshold))
       }
       owned.insert(id)
       do {

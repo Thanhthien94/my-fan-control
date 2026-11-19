@@ -39,6 +39,7 @@ struct GeneralSettingsView: View {
         LabeledContent(L10n.t("Cập nhật"), value: L10n.t("Mỗi 1 giây"))
         Divider()
         FanProtectionSettings(store: store)
+        ThermalThresholdSettings(store: store)
         Divider()
         Picker(L10n.t("settings.menuSensor"), selection: $menuBarSensorID) {
           Text(L10n.t("Cảm biến nóng nhất")).tag("")
@@ -180,5 +181,33 @@ private struct FanProtectionSettings: View {
         .fixedSize(horizontal: false, vertical: true)
       if let feedback { Text(feedback).font(.caption).textSelection(.enabled) }
     }.disabled(store.busy)
+  }
+}
+
+private struct ThermalThresholdSettings: View {
+  var store: FanStore
+  @AppStorage("fahrenheit") private var fahrenheit = false
+  @State private var draft = ControlSafety.defaultThreshold
+  @State private var feedback: String?
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(L10n.t("thermal.title")).font(.headline)
+      HStack {
+        Stepper(value: $draft, in: ControlSafety.thresholdRange, step: 1) {
+          Text((fahrenheit ? TemperatureUnit.fahrenheit : .celsius).text(draft, decimals: 0))
+            .monospacedDigit()
+        }
+        Button(L10n.t("thermal.apply")) {
+          Task {
+            let success = await store.setThermalThreshold(draft)
+            feedback = success ? L10n.t("thermal.saved") : store.error
+          }
+        }.disabled(draft == store.thermalThreshold)
+      }
+      Text(L10n.t("thermal.detail")).font(.caption).foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+      if let feedback { Text(feedback).font(.caption).textSelection(.enabled) }
+    }.disabled(store.busy)
+      .onAppear { draft = store.thermalThreshold }
   }
 }

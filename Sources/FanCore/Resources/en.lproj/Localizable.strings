@@ -345,3 +345,9 @@
 
 
 "mode.fixedAppliedTargets" = "Targets set: %@ · “%@”.";
+"thermal.title" = "Return-to-automatic threshold";
+"thermal.apply" = "Apply threshold";
+"thermal.saved" = "Return-to-automatic threshold updated.";
+"thermal.invalid" = "Return-to-automatic threshold must be 60–150°C.";
+"thermal.requires" = "Manual control requires all temperature sensors to be valid and below %.0f°C.";
+"thermal.detail" = "Default 90°C · Range 60–150°C (140–302°F). When any sensor reaches the threshold, all controlled fans return to automatic. Applies immediately on save. A higher threshold delays returning control to macOS; this is not an Apple-specified thermal limit.";

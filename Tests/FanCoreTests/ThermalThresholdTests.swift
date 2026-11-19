@@ -25,9 +25,21 @@ struct ThermalThresholdTests {
     try session.setThermalThreshold(95)
     #expect(hw.restored && session.activeIDs.isEmpty)
   }
+  @Test func pollingAtCustomBoundaryRestoresWithoutAnotherWrite() throws {
+    let hw = ThresholdHardware()
+    let session = ControlSession(hardware: hw)
+    try session.setThermalThreshold(150)
+    try session.configure(id: 0, rule: FanPreset(name: "Work", mode: .fixed, rpm: 2500))
+    hw.temperature = 149
+    session.tick(leaseAge: 1)
+    #expect(session.activeIDs == [0])
+    hw.temperature = 150
+    session.tick(leaseAge: 1)
+    #expect(hw.restored && session.activeIDs.isEmpty)
+  }
   @Test func invalidThresholdsCannotDisableSafety() throws {
     let session = ControlSession(hardware: ThresholdHardware())
-    for value in [Double.nan, .infinity, 59, 111] {
+    for value in [Double.nan, .infinity, 59, 151] {
       #expect(throws: (any Error).self) { try session.setThermalThreshold(value) }
       #expect(session.thermalThreshold == 90)
     }
@@ -38,5 +50,17 @@ struct ThermalThresholdTests {
     #expect(ControlSafety.permits(leaseAge: 1, sensors: sensors, threshold: 105))
     #expect(!ControlSafety.permits(leaseAge: 10, sensors: sensors, threshold: 105))
     #expect(!ControlSafety.permits(leaseAge: 1, sensors: [], threshold: 105))
+  }
+}
+
+struct ThermalTelemetryBoundaryTests {
+  @Test func threshold150StillSeesHotChannelAlongsideCoolSensor() throws {
+    let reader = SMCTelemetryReader(number: { key in
+      if key == "FNum" { return 0 }
+      return key == "hot" ? 150 : 50
+    }, temperatureKeys: { ["hot", "cool"] })
+    let snapshot = try reader.snapshot()
+    #expect(snapshot.sensors.count == 2)
+    #expect(!ControlSafety.permits(leaseAge: 1, sensors: snapshot.sensors, threshold: 150))
   }
 }

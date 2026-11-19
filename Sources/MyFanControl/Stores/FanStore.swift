@@ -24,6 +24,7 @@ struct TemperaturePoint: Identifiable {
   var controlled = Set<Int>()
   var restoring = Set<Int>()
   private var pendingPresetRestorations = [UUID: Set<Int>]()
+  private(set) var thermalThreshold = ControlSafety.defaultThreshold
   private(set) var fanProtectionEnabled = true
   func effectiveMinimumRPM(for fan: Fan) -> Double {
     fan.minimum
@@ -75,6 +76,32 @@ struct TemperaturePoint: Identifiable {
       return false
     }
   }
+  @discardableResult func setThermalThreshold(_ value: Double) async -> Bool {
+    guard !busy, !schedules.isProcessing else { error = L10n.t("operation.busy"); return false }
+    guard ControlSafety.validThreshold(value) else { error = L10n.t("thermal.invalid"); return false }
+    busy = true
+    defer { busy = false }
+    do {
+      if helperEnabled {
+        let result = try await hardware.send(HelperRequest("setThermalThreshold", thermalThreshold: value))
+        controlled = Set(result.controlled)
+        restoring = Set(result.restoring ?? [])
+        active = active.filter { controlled.contains($0.key) }
+        helperMessage = result.message
+      } else if !active.isEmpty || !controlled.isEmpty || !restoring.isEmpty {
+        throw FanError.helper(L10n.t("Chưa bật quyền điều khiển quạt."))
+      }
+      thermalThreshold = value
+      defaults.set(value, forKey: "thermalThreshold")
+      error = nil
+      return true
+    } catch {
+      let message = error.localizedDescription
+      if helperEnabled { await refresh() }
+      self.error = message
+      return false
+    }
+  }
   func uniquePresetName(_ base: String) -> String {
     var name = base
     var index = 2
@@ -99,6 +126,8 @@ struct TemperaturePoint: Identifiable {
     self.feedbackNow = feedbackNow
     self.hardware = hardware
     self.defaults = defaults
+    let savedThreshold = defaults.object(forKey: "thermalThreshold") as? Double ?? ControlSafety.defaultThreshold
+    self.thermalThreshold = ControlSafety.validThreshold(savedThreshold) ? savedThreshold : ControlSafety.defaultThreshold
     self.fanProtectionEnabled = defaults.object(forKey: "fanProtectionEnabled") as? Bool ?? true
     defaults.removeObject(forKey: "minimumRPM") // Retire the removed global override.
     self.schedules = schedules ?? ScheduleStore(defaults: defaults)
@@ -221,7 +250,7 @@ struct TemperaturePoint: Identifiable {
     busy = true
     defer { busy = false }
     do {
-      let result = try await hardware.send(HelperRequest("configure", fanID: id, preset: rule, fanProtectionEnabled: fanProtectionEnabled))
+      let result = try await hardware.send(HelperRequest("configure", fanID: id, preset: rule, fanProtectionEnabled: fanProtectionEnabled, thermalThreshold: thermalThreshold))
       controlled = Set(result.controlled)
       if controlled.contains(id) { active[id] = rule } else { active.removeValue(forKey: id) }
       helperMessage = result.message
@@ -268,7 +297,7 @@ struct TemperaturePoint: Identifiable {
           for: fan, sensors: snapshot.sensors)
       }
       let result = try await hardware.send(
-        HelperRequest("configureGroup", fanIDs: snapshot.fans.map(\.id), preset: rule, fanProtectionEnabled: fanProtectionEnabled))
+        HelperRequest("configureGroup", fanIDs: snapshot.fans.map(\.id), preset: rule, fanProtectionEnabled: fanProtectionEnabled, thermalThreshold: thermalThreshold))
       controlled = Set(result.controlled)
       for fan in snapshot.fans {
         if controlled.contains(fan.id) {
