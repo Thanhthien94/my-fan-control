@@ -18,4 +18,4 @@ Journeys were derived from the requested setting and 60–150°C range.
 - Additional regression RED: a 150°C channel was discarded beside a 50°C channel; `/tmp/mfc-thermal-boundary-red.log`.
 - GREEN: `./script/test.sh` passes 98 core and 53 app tests. Tests cover default/custom admission, equality boundary on polling, immediate lowering, highest-channel enforcement, expired lease, invalid settings, persistence, propagation to single/group activation, busy/rejected updates, and corrupt preference fallback.
 - `python3 script/check_localization.py`: 346 matching VI/EN keys and format placeholders.
-- Tests use fake hardware. No high-temperature physical trial or measured thermal safety claim. Interactive UI rendering has not been visually verified in this session.
+- Tests use fake hardware. No high-temperature physical trial or measured thermal safety claim. Installed and launched `/Applications/MyFanControl.app` from revision `375672a`. Settings accessibility inspection confirmed the threshold heading, current 90°C value and 60–150°C explanation. Pixel-level rendering and a live elevated-helper threshold change were not exercised.
