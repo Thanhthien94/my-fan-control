@@ -24,7 +24,7 @@ final class SMCTelemetryReader {
       availability = .unavailable
     }
     let sensors = try temperatureKeys().compactMap { key -> Sensor? in
-      guard let value = try? number(key), value.isFinite, value > 0, value < 130 else { return nil }
+      guard let value = try? number(key), value.isFinite, value > 0, value < 200 else { return nil }
       return Sensor(id: key, name: SensorCatalog.lookup(key).name, celsius: value)
     }
     return Snapshot(fans: fans, sensors: sensors, fanAvailability: availability)

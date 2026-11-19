@@ -52,8 +52,16 @@ final class FanKeyController {
     }
     throw last
   }
+  private func confirmGate(respectBudget: Bool) throws {
+    for attempt in 0..<60 {
+      if respectBudget { try checkOperation() }
+      if try read("Ftst") == 1 { return }
+      if attempt < 59 { wait(0.05) }
+    }
+    throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
+  }
   func setTarget(fan: Fan, rpm: Double) throws {
-    guard (0..<10).contains(fan.id), rpm.isFinite, rpm >= fan.minimum, rpm <= fan.maximum else {
+    guard (0..<10).contains(fan.id), rpm.isFinite, rpm >= 0, fan.maximum.isFinite, fan.maximum > 0, fan.maximum <= 20000, rpm <= fan.maximum else {
       throw FanError.invalid(L10n.t("RPM nằm ngoài giới hạn phần cứng."))
     }
     try checkOperation()
@@ -69,14 +77,12 @@ final class FanKeyController {
       if gate == 0 {
         try retry("Ftst", 1, attempts: 100, respectBudget: true)
         ownsGate = true
-        wait(3)
       } else {
         ownsGate = true
       }
-      try checkOperation()
-      guard try read("Ftst") == 1 else {
-        throw FanError.invalid(L10n.t("Không xác nhận được chế độ quạt."))
-      }
+      // The gate can acknowledge immediately. A fixed delay here lets firmware
+      // spin fans before their low startup targets are written.
+      try confirmGate(respectBudget: true)
     }
     if let key {
       try forcePair(key: key, fanID: fan.id, rpm: rpm, attempts: 300)
@@ -100,11 +106,15 @@ final class FanKeyController {
       do {
         // Some firmware drops forced mode while target is zero. Write the bounded target
         // immediately after mode, then verify the pair instead of checking in between.
-        try write(key, 1)
+        var modeFailure: Error?
+        do { try write(key, 1) } catch { modeFailure = error }
         try checkOperation()
+        // Firmware may reject mode until a nonzero target is staged. Do not
+        // starve the low target behind repeated mode failures; verify both below.
         try write("F\(fanID)Tg", rpm)
         try checkOperation()
         if try read(key) == 1, abs(try read("F\(fanID)Tg") - rpm) < 2 { return }
+        if let modeFailure { last = modeFailure }
       } catch { last = error }
       if i + 1 < attempts { wait(0.1) }
     }
@@ -175,7 +185,7 @@ final class FanKeyController {
       if !ids.isEmpty, gate == 0 {
         try retry("Ftst", 1, attempts: 100)
         ownsGate = true
-        wait(3)
+        try confirmGate(respectBudget: false)
         gate = 1
       }
       // Reset every owned mode and target before releasing the global gate. Leaving a
